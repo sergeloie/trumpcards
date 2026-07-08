@@ -27,104 +27,98 @@
 ---
 
 Техническое задание для кодинг-агента
+---
 
 ## 1. Общая цель
 
-Разработать карточную игру в виде web-приложения по указанным выше правилам с:
+Реализовать карточную игру как **чистое frontend-приложение**:
 
-* Backend: Java 21 + Spring Boot 4.1.0, Gradle - Kotlin
-* Frontend: TypeScript + HTML5 Canvas
-* Архитектура: Clean Architecture (Hexagonal / Ports & Adapters)
+* TypeScript (strict mode)
+* HTML5 Canvas (рендер)
+* Без backend на первом этапе
 
-Игра должна:
+При этом архитектура должна позволять:
 
-* запускаться локально (single-player / hot-seat)
-* игровое поле адаптивное и занимает всё окно браузера
-* быть изначально спроектирована для последующего перехода в сетевой multiplayer (WebSocket / REST)
-
----
-
-## 2. Архитектурные принципы
-
-### 2.1 Основные правила
-
-1. Чистая архитектура (строго):
-
-   * Domain НЕ зависит ни от чего
-   * Application зависит только от Domain
-   * Infrastructure зависит от Application и Domain
-
-2. Никакой логики игры вне Domain слоя
-
-3. UI (Canvas) — только отображение + ввод
-
-4. Backend не знает про Canvas
+* легко добавить backend в будущем
+* перейти на multiplayer (WebSocket / server-authoritative)
 
 ---
 
-## 3. Структура проекта
+## 2. Главный принцип
 
-### 3.1 Backend (Java)
+⚠️ КРИТИЧНО:
 
-```
-backend/
- ├── domain/
+Несмотря на отсутствие backend, архитектура должна имитировать его наличие.
+
+То есть:
+
+* Game Logic ≠ UI
+* State Manager ≈ "локальный сервер"
+* UI — только клиент
+
+---
+
+## 3. Архитектурный стиль
+
+Использовать:
+
+* Clean Architecture (адаптированную под frontend)
+* или Hexagonal (Ports & Adapters)
+
+---
+
+## 4. Структура проекта
+
+```id="2t0p4f"
+frontend/
+ ├── domain/                # чистая логика игры
  │    ├── model/
- │    ├── service/
- │    ├── event/
- │    └── rule/
+ │    ├── rules/
+ │    ├── services/
+ │    └── events/
  │
- ├── application/
- │    ├── usecase/
+ ├── application/           # use cases (как backend API)
+ │    ├── usecases/
  │    ├── dto/
- │    ├── port/
+ │    ├── ports/
  │    │    ├── in/
  │    │    └── out/
  │
- ├── infrastructure/
- │    ├── web/
- │    │    ├── rest/
- │    │    └── websocket/ (будущее)
+ ├── infrastructure/        # реализации (in-memory, storage)
  │    ├── persistence/
+ │    ├── adapters/
  │    └── config/
+ │
+ ├── presentation/
+ │    ├── canvas/
+ │    ├── input/
+ │    ├── ui/
+ │    └── state/
  │
  └── main/
 ```
 
 ---
 
-### 3.2 Frontend (TypeScript)
+## 5. Domain слой (ядро)
 
-```
-frontend/
- ├── core/
- │    ├── game-engine/
- │    ├── state/
- │    └── api-client/
- │
- ├── rendering/
- │    ├── canvas/
- │    └── animations/
- │
- ├── input/
- │
- └── ui/
-```
+### 5.1 Обязанности
+
+* правила игры
+* валидация ходов
+* переходы состояний
+* бизнес-логика
+
+### 5.2 Ограничения
+
+* ❌ никаких зависимостей от браузера
+* ❌ никаких зависимостей от Canvas
+* ❌ никаких side-effects
+* ✔ только чистые функции и модели
 
 ---
 
-## 4. Domain слой (главное ядро)
-
-### 4.1 Обязанности
-
-* правила игры
-* состояние игры
-* валидация ходов
-* переходы состояний
-
-### 4.2 Основные сущности
-
-Примеры (адаптируй под свои правила):
+### 5.3 Пример сущностей
 
 * Game
 * Player
@@ -133,197 +127,263 @@ frontend/
 * Turn
 * Action
 
-### 4.3 Правила
+---
 
-* Domain должен быть **чистым Java (без Spring)**
-* immutable где возможно
-* никакого IO
+### 5.4 Пример правила
+
+```id="u0q8jo"
+function canPlayCard(game: Game, action: PlayCardAction): boolean
+```
 
 ---
 
-## 5. Application слой
+## 6. Application слой (имитация backend)
 
-### 5.1 Use Cases
+### 6.1 Зачем он нужен
+
+Даже без backend:
+
+👉 этот слой = "локальный сервер"
+
+---
+
+### 6.2 Use Cases
 
 Каждое действие — отдельный use case:
 
-* CreateGame
-* JoinGame (для будущего)
-* StartGame
-* PlayCard
-* EndTurn
+* createGame
+* startGame
+* playCard
+* endTurn
 
-### 5.2 Ports
+---
 
-#### In (входящие)
+### 6.3 Пример
 
-```
-interface PlayCardUseCase {
-    GameState handle(PlayCardCommand command);
+```id="4c5zrl"
+class PlayCardUseCase {
+  execute(command: PlayCardCommand): GameStateDTO
 }
 ```
 
-#### Out (исходящие)
+---
+
+### 6.4 Ports
+
+#### In (вход)
+
+* вызывается UI
+
+#### Out (выход)
 
 * GameRepository
-* EventPublisher (для будущего realtime)
+* EventBus (для будущего realtime)
 
 ---
 
-## 6. Infrastructure слой
+## 7. Infrastructure слой
 
-### 6.1 REST API (локальный режим)
+### 7.1 In-memory storage
 
-* POST /game/create
-* POST /game/{id}/action
-* GET /game/{id}
-
-### 6.2 Будущее расширение
-
-Сразу предусмотреть:
-
-* WebSocket endpoint
-* события:
-
-  * GAME_UPDATED
-  * PLAYER_JOINED
-  * TURN_CHANGED
+```id="f3e9qk"
+class InMemoryGameRepository implements GameRepository
+```
 
 ---
 
-## 7. Frontend архитектура
+### 7.2 Local persistence (опционально)
 
-### 7.1 Принципы
-
-* Canvas — только рендер
-* Game logic НЕ дублируется (backend — источник истины)
-* Front хранит только "проекцию состояния"
+* LocalStorage
+* IndexedDB
 
 ---
 
-### 7.2 Слои
+### 7.3 Event Bus
 
-#### Game Engine (client-side)
+* простая pub/sub система
+* нужна для будущего WebSocket
 
-* синхронизация с сервером
-* применение state updates
-* optimistic updates (опционально)
+---
 
-#### Renderer
+## 8. Presentation слой
 
-* отрисовка карт
-* анимации
-* layout
+## 8.1 Принцип
 
-#### Input
+UI НЕ содержит бизнес-логики
+
+---
+
+### 8.2 Подслои
+
+#### State (важно)
+
+* хранит текущий GameStateDTO
+* синхронизируется через use cases
+
+👉 это "client store", но НЕ источник истины
+
+---
+
+#### Canvas Renderer
+
+* отрисовка:
+
+  * карт
+  * стола
+  * игроков
+* никаких правил
+
+---
+
+#### Input Layer
 
 * mouse / touch
-* преобразование в команды
+* переводит действия в команды
 
 ---
 
-## 8. Синхронизация состояния
+#### UI Layer
 
-### 8.1 Формат
-
-Backend возвращает:
-
-```
-GameStateDTO
-```
-
-Frontend:
-
-* полностью перерисовывает состояние
-* без локальной бизнес-логики
+* кнопки
+* панели
+* HUD
 
 ---
 
-## 9. Подготовка к мультиплееру
+## 9. Поток данных
 
-Обязательно:
-
-1. GameId как ключ
-2. PlayerId
-3. Stateless backend (кроме хранилища игры)
-4. Возможность заменить:
-
-   * in-memory storage → Redis / DB
-5. Поддержка событийной модели
+```id="x6nh0m"
+User Input
+   ↓
+Command
+   ↓
+UseCase
+   ↓
+Domain Logic
+   ↓
+New GameState
+   ↓
+State Store
+   ↓
+Renderer (Canvas)
+```
 
 ---
 
-## 10. Хранение данных
+## 10. Формат состояния
 
-На старте:
+Использовать DTO:
 
-* InMemoryGameRepository
-
-Интерфейс:
-
-```
-interface GameRepository {
-    Game save(Game game);
-    Optional<Game> findById(GameId id);
+```id="1my6kz"
+type GameStateDTO = {
+  gameId: string
+  players: PlayerDTO[]
+  table: CardDTO[]
+  currentTurn: string
 }
 ```
 
 ---
 
-## 11. Тестирование
+## 11. Подготовка к мультиплееру (ОЧЕНЬ ВАЖНО)
 
-### 11.1 Domain
+Даже без backend:
 
-* unit tests (обязательно)
-* покрытие правил игры
+### 11.1 Обязательные правила
 
-### 11.2 Application
-
-* use case tests
-
-### 11.3 Infrastructure
-
-* минимально
+1. Все действия идут через Use Cases
+2. Нет прямых мутаций state
+3. GameState считается "пришедшим извне"
 
 ---
 
-## 12. Требования к коду
+### 11.2 Лёгкий переход на сервер
 
-* Java:
+В будущем заменить:
 
-  * records где возможно
-  * sealed interfaces для действий
-* TypeScript:
+```id="q8r3r2"
+PlayCardUseCase.execute(...)
+```
 
-  * strict mode
-  * no any
+на:
+
+```id="zq1m0k"
+POST /game/action
+```
 
 ---
 
-## 14. Минимальный MVP
+### 11.3 Event-ready архитектура
+
+Добавить:
+
+* GameUpdatedEvent
+* TurnChangedEvent
+
+---
+
+## 12. Синхронизация состояния
+
+### Сейчас:
+
+* полный пересчёт состояния
+
+### В будущем:
+
+* diff / events
+
+---
+
+## 13. Тестирование
+
+### Domain (обязательно)
+
+* unit tests
+* проверка правил
+
+### Application
+
+* тесты use cases
+
+---
+
+## 14. Требования к коду
+
+### TypeScript
+
+* "strict": true
+* no any
+* prefer readonly
+* immutable state
+
+---
+
+## 15. MVP
 
 1. Создание игры
-2. Один игрок человек - козырная масть "пики"
-3. Остальные игроки боты, напиши для них простую логику игры
-4. Возможность сделать ход
-5. Отрисовка через Canvas
-6. Обновление состояния через REST
+2. Один игрок человек, ему назначена козырная масть пики
+3. Остальные игроки боты, напиши для них простую логику
+4. Отрисовка через Canvas
+5. Обновление состояния
+6. Табло располагается в левом верхнем углу, визуально отображается как 4 карты, лежащие в один ряд
+7. Карты в руке игрока, сгруппированы по мастям и отсортированы внутри масти в порядке возрастания. Порядок мастей в руке игрока повторяет порядок мастей игроков за столом
+8. Возле каждого игрока графически отображена назначенная ему масть
 
 
-## 16. Ограничения
+---
 
-Запрещено:
+## 16. Запрещено
 
-* писать бизнес-логику во frontend
-* смешивать слои
-* использовать Spring внутри domain
+❌ писать логику игры в Canvas
+❌ менять state напрямую из UI
+❌ связывать Domain с браузером
 
 ---
 
 ## 17. Definition of Done
 
-* игра запускается локально
-* можно доиграть до конца
-* архитектура соответствует Clean Architecture
-* код легко расширяется до multiplayer
+* игра полностью работает локально
+* архитектура разделена на слои
+* можно добавить backend без переписывания логики
+* код легко масштабируется
 
