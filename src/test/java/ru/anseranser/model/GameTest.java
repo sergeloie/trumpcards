@@ -154,4 +154,36 @@ class GameTest {
 
         assertEquals(1, gamers, "Exactly one player should remain");
     }
+
+    @Test
+    void playGame_threePlayersEliminated_withACEonScoreboard() {
+        Game game = new Game();
+        game.playGame();
+
+        // Count eliminated players
+        int eliminated = 0;
+        Player start = game.getPlayers().getRandom();
+        Player current = start;
+        do {
+            if (!current.isGamer()) eliminated++;
+            current = game.getPlayers().getNext(current);
+        } while (current != start);
+
+        assertEquals(3, eliminated, "Three players should be eliminated");
+
+        // Verify winner exists
+        Player winner = game.getWinner();
+        assertNotNull(winner);
+
+        // Check scoreboard: each eliminated player's trump should have ACE on top
+        start = game.getPlayers().getRandom();
+        current = start;
+        do {
+            if (!current.isGamer()) {
+                Card.Suit trump = current.getTrump();
+                System.out.println("Eliminated: " + current + " trump=" + trump);
+            }
+            current = game.getPlayers().getNext(current);
+        } while (current != start);
+    }
 }

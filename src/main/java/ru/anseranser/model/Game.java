@@ -18,6 +18,7 @@ public class Game {
     private final List<Card> deck;
     private final Map<Card.Suit, Deque<Card>> scoreboard;
     private Player dealer;
+    private final List<Card> bank = new ArrayList<>();
 
     public Game() {
         players = new CircularDoublyLinkedList<>();
@@ -70,9 +71,15 @@ public class Game {
         java.util.Collections.shuffle(deck);
 
         Player current = players.getNext(dealer);
+        while (!current.isGamer()) {
+            current = players.getNext(current);
+        }
+
         for (int i = 0; i < deck.size(); i++) {
             current.getHand().add(deck.get(i));
-            current = players.getNext(current);
+            do {
+                current = players.getNext(current);
+            } while (!current.isGamer());
         }
         deck.clear();
     }
@@ -181,7 +188,7 @@ public class Game {
     // ---------- Round ----------
 
     private Player playRound() {
-        List<Card> bank = new ArrayList<>();
+        bank.clear();
 
         shuffleAndDeal();
         distributeObligatoryCards();
@@ -194,47 +201,59 @@ public class Game {
             current = nextActivePlayer(current);
         }
 
-        return getActivePlayer();
+        // The loser is the player who has cards (took the bank)
+        Player start = players.getRandom();
+        Player p = start;
+        do {
+            if (p.isGamer() && p.isRounder() && !p.getHand().isEmpty()) {
+                return p;
+            }
+            p = players.getNext(p);
+        } while (p != start);
+
+        return null;
     }
 
-    private void registerLoss(Player loser) {
+    private Player nextDealer(Player from) {
+        Player next = players.getNext(from);
+        while (!next.isGamer()) {
+            next = players.getNext(next);
+        }
+        return next;
+    }
+
+    // ---------- Game ----------
+
+    private boolean endRound(Player loser, List<Card> bank) {
+        deck.addAll(loser.getHand());
+        loser.getHand().clear();
+        deck.addAll(bank);
+        bank.clear();
+
         Card.Suit trump = loser.getTrump();
-        Optional<Card> lowestTrump = loser.getHand().stream()
+        Optional<Card> lowestTrump = deck.stream()
                 .filter(c -> c.suit() == trump)
                 .min(Comparator.comparing(c -> c.rank().getValue()));
 
         if (lowestTrump.isPresent()) {
             Card card = lowestTrump.get();
-            loser.getHand().remove(card);
+            deck.remove(card);
             scoreboard.get(trump).push(card);
+            return card.rank() == Card.Rank.ACE;
         }
+        return true;
     }
-
-    private void eliminatePlayers() {
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer() && !hasTrumps(current)) {
-                current.setGamer(false);
-                current.setRounder(false);
-            }
-            current = players.getNext(current);
-        } while (current != start);
-    }
-
-    private boolean hasTrumps(Player player) {
-        Card.Suit trump = player.getTrump();
-        return player.getHand().stream().anyMatch(c -> c.suit() == trump);
-    }
-
-    // ---------- Game ----------
 
     public void playGame() {
         while (countActiveGamers() > 1) {
             Player loser = playRound();
-            registerLoss(loser);
-            eliminatePlayers();
-            dealer = loser;
+            if (loser == null) break;
+            boolean eliminated = endRound(loser, bank);
+            if (eliminated) {
+                loser.setGamer(false);
+                loser.setRounder(false);
+            }
+            dealer = nextDealer(loser);
         }
     }
 
