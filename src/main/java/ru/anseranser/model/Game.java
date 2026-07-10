@@ -194,6 +194,11 @@ public class Game {
         distributeObligatoryCards();
         resetRounders();
 
+        System.out.println("\n===== РАУНД =====");
+        System.out.println("Дилер: " + dealer);
+        printScoreboard();
+        printHands();
+
         Player current = dealer;
 
         while (countActiveRounders() > 1) {
@@ -225,6 +230,9 @@ public class Game {
     // ---------- Game ----------
 
     private boolean endRound(Player loser, List<Card> bank) {
+        System.out.println("\n--- Конец раунда ---");
+        System.out.println("Проигравший: " + loser);
+
         deck.addAll(loser.getHand());
         loser.getHand().clear();
         deck.addAll(bank);
@@ -239,22 +247,28 @@ public class Game {
             Card card = lowestTrump.get();
             deck.remove(card);
             scoreboard.get(trump).push(card);
+            System.out.println("На scoreboard " + trump + " выкладывается: " + card);
+            printScoreboard();
             return card.rank() == Card.Rank.ACE;
         }
         return true;
     }
 
     public void playGame() {
+        System.out.println("=== НАЧАЛО ИГРЫ ===");
         while (countActiveGamers() > 1) {
             Player loser = playRound();
             if (loser == null) break;
             boolean eliminated = endRound(loser, bank);
             if (eliminated) {
+                System.out.println(">>> " + loser + " выбывает из игры (козырь исчерпан) <<<");
                 loser.setGamer(false);
                 loser.setRounder(false);
             }
             dealer = nextDealer(loser);
         }
+        System.out.println("\n=== ИГРА ОКОНЧЕНА ===");
+        System.out.println("Победитель: " + getWinner());
     }
 
     public Player getWinner() {
@@ -268,6 +282,14 @@ public class Game {
     }
 
     // ---------- Debug / print ----------
+
+    public void printScoreboard() {
+        System.out.println("Scoreboard:");
+        for (Card.Suit suit : Card.Suit.values()) {
+            Deque<Card> stack = scoreboard.get(suit);
+            System.out.println("  " + suit + ": " + stack);
+        }
+    }
 
     public void printHands() {
         Player start = players.getRandom();

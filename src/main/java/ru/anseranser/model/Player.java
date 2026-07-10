@@ -99,6 +99,7 @@ public class Player {
             Card leadCard = chooseLeadCard();
             bank.add(leadCard);
             hand.remove(leadCard);
+            System.out.println("  " + this + " ходит: " + leadCard);
             if (hand.isEmpty()) rounder = false;
             return;
         }
@@ -107,6 +108,7 @@ public class Player {
         Optional<Card> defense = weakestDefense(topCard);
 
         if (defense.isEmpty()) {
+            System.out.println("  " + this + " не может побить " + topCard + " → забирает банк (" + bank.size() + " карт)");
             takePot(bank);
             return;
         }
@@ -114,11 +116,13 @@ public class Player {
         Card beatCard = defense.get();
         bank.add(beatCard);
         hand.remove(beatCard);
+        System.out.println("  " + this + " побивает " + topCard + " картой " + beatCard);
         if (hand.isEmpty()) { rounder = false; return; }
 
         Card leadCard = chooseLeadCard();
         bank.add(leadCard);
         hand.remove(leadCard);
+        System.out.println("  " + this + " ходит: " + leadCard);
         if (hand.isEmpty()) rounder = false;
     }
 }
