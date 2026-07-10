@@ -1,11 +1,8 @@
 package ru.anseranser.model;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
-@Getter
-public class Card {
+public record Card(Suit suit, Rank rank) {
     public enum Suit {
         SPADES, CLUBS, DIAMONDS, HEARTS
     }
@@ -22,9 +19,6 @@ public class Card {
         }
 
     }
-
-    private final Suit suit;
-    private final Rank rank;
 
     @Override
     public String toString() {

@@ -1,5 +1,7 @@
 package ru.anseranser.utils;
 
+import java.util.Random;
+
 public class CircularDoublyLinkedList<T> {
     private static class Node<T> {
         T value;
@@ -134,5 +136,52 @@ public class CircularDoublyLinkedList<T> {
         }
 
         return false;
+    }
+
+    public T getNext(T target) {
+        if (head == null) {
+            return null;
+        }
+
+        Node<T> current = head;
+        for (int i = 0; i < size; i++) {
+            if ((current.value == null && target == null) ||
+                    (current.value != null && current.value.equals(target))) {
+                return current.next.value;
+            }
+            current = current.next;
+        }
+
+        return null;
+    }
+
+    public T getPrevious(T target) {
+        if (head == null) {
+            return null;
+        }
+
+        Node<T> current = head;
+        for (int i = 0; i < size; i++) {
+            if ((current.value == null && target == null) ||
+                    (current.value != null && current.value.equals(target))) {
+                return current.prev.value;
+            }
+            current = current.next;
+        }
+
+        return null;
+    }
+
+    public T getRandom() {
+        if (head == null) {
+            return null;
+        }
+
+        int index = new Random().nextInt(size);
+        Node<T> current = head;
+        for (int i = 0; i < index; i++) {
+            current = current.next;
+        }
+        return current.value;
     }
 }

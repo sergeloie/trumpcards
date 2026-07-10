@@ -53,7 +53,7 @@ public class Table {
         Iterator<Card> it = deck.iterator();
         while (it.hasNext()) {
             Card c = it.next();
-            if (c.getSuit() == suit && c.getRank() == rank) {
+            if (c.suit() == suit && c.rank() == rank) {
                 it.remove();
                 return c;
             }
@@ -117,7 +117,7 @@ public class Table {
             // and the obligatory-card exchange, they simply never enter the round
         }
     }
-
+*\\
     // ---------- Dealing ----------
 
     private void dealCards() {

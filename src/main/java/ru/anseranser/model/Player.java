@@ -3,12 +3,12 @@ package ru.anseranser.model;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Getter
@@ -21,31 +21,24 @@ public class Player {
     @Setter
     private boolean rounder = true;
     @Setter
-    private CircularTable table;
+    private CircularDoublyLinkedList<Player> table;
 
     private boolean canBeat(Card attacking, Card defending) {
-        if (attacking.getSuit() == defending.getSuit()) {
-            return attacking.getRank().getValue() < defending.getRank().getValue();
-        } else return defending.getSuit() == trump;
+        if (attacking.suit() == defending.suit()) {
+            return attacking.rank().getValue() < defending.rank().getValue();
+        } else return defending.suit() == trump;
     }
 
-//    public List<Card> possibleDefenses(Card attacking) {
-//        return hand.stream()
-//                .filter(card -> canBeat(attacking, card))
-//                .collect(Collectors.toList());
-//    }
-
     public boolean canBeat(Card attacking) {
-        Optional<Card> optionalCard = weakestDefense(attacking);
-        return optionalCard.isEmpty();
+        return weakestDefense(attacking).isPresent();
     }
 
     public Optional<Card> weakestDefense(Card attacking) {
         return hand.stream()
                 .filter(c -> canBeat(attacking, c))
                 .min(Comparator
-                        .comparing((Card c) -> c.getSuit() == trump) // некозыри сначала (false < true)
-                        .thenComparing(c -> c.getRank().getValue()));
+                        .comparing((Card c) -> c.suit() == trump) // некозыри сначала (false < true)
+                        .thenComparing(c -> c.rank().getValue()));
     }
 
     public void takePot(List<Card> pot) {
@@ -63,7 +56,7 @@ public class Player {
 
     public Card chooseBeatCard(List<Card> options) {
         return options.stream()
-                .min(Comparator.comparing(c -> c.getRank().getValue()))
+                .min(Comparator.comparing(c -> c.rank().getValue()))
                 .orElseThrow(() -> new IllegalStateException("No cards to hang up"));
     }
 
@@ -78,17 +71,15 @@ public class Player {
      * это последний элемент). Берётся наименьшая карта первой найденной подходящей
      * масти. Если ни одна из чужих мастей не представлена в руке — ходим своим козырем.
      */
-    public Card chooseLeadCard(List<Player> allPlayers) {
-        int n = allPlayers.size();
-        int myIndex = allPlayers.indexOf(this);
-
-        for (int step = 1; step < n; step++) {
-            int idx = ((myIndex - step) % n + n) % n;
-            Card.Suit suit = allPlayers.get(idx).getTrump();
+    public Card chooseLeadCard() {
+        Player current = this;
+        for (int i = 0; i < table.size() - 1; i++) {
+            current = table.getPrevious(current);
+            Card.Suit suit = current.getTrump();
 
             Optional<Card> smallest = hand.stream()
-                    .filter(c -> c.getSuit() == suit)
-                    .min(Comparator.comparing(c -> c.getRank().getValue()));
+                    .filter(c -> c.suit() == suit)
+                    .min(Comparator.comparing(c -> c.rank().getValue()));
 
             if (smallest.isPresent()) {
                 return smallest.get();
@@ -96,30 +87,38 @@ public class Player {
         }
 
         return hand.stream()
-                .filter(c -> c.getSuit() == trump)
-                .min(Comparator.comparing(c -> c.getRank().getValue()))
+                .filter(c -> c.suit() == trump)
+                .min(Comparator.comparing(c -> c.rank().getValue()))
                 .orElseThrow(() -> new IllegalStateException("No cards to turn"));
     }
 
-    public void makeMove(List<Card> bank, List<Player> allPlayers) {
-        Card topCard = bank.getLast();
-        if (rounder) {
-            if (!canBeat(topCard)) {
-                takePot(bank);
-            } else {
-                Card beatCard = weakestDefense(topCard).get();
-                bank.add(beatCard);
-                hand.remove(beatCard);
-                if (!hand.isEmpty()) {
-                    Card attackingCard = chooseLeadCard(allPlayers);
-                    bank.add(attackingCard);
-                    hand.remove(attackingCard);
-                }
-            }
-        }
-        if (hand.isEmpty()) {
-            rounder = false;
+    public void makeMove(List<Card> bank) {
+        if (!rounder) return;
+
+        if (bank.isEmpty()) {
+            Card leadCard = chooseLeadCard();
+            bank.add(leadCard);
+            hand.remove(leadCard);
+            if (hand.isEmpty()) rounder = false;
+            return;
         }
 
+        Card topCard = bank.getLast();
+        Optional<Card> defense = weakestDefense(topCard);
+
+        if (defense.isEmpty()) {
+            takePot(bank);
+            return;
+        }
+
+        Card beatCard = defense.get();
+        bank.add(beatCard);
+        hand.remove(beatCard);
+        if (hand.isEmpty()) { rounder = false; return; }
+
+        Card leadCard = chooseLeadCard();
+        bank.add(leadCard);
+        hand.remove(leadCard);
+        if (hand.isEmpty()) rounder = false;
     }
 }
