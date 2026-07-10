@@ -179,8 +179,16 @@ public class Game {
     // ---------- Round ----------
 
     private Player playRound() {
-        bank.clear();
+        setupRound();
 
+        Player current = dealer;
+        playMoves(current);
+
+        return determineLoser();
+    }
+
+    private void setupRound() {
+        bank.clear();
         shuffleAndDeal();
         distributeObligatoryCards();
         resetRounders();
@@ -189,15 +197,16 @@ public class Game {
         System.out.println("Дилер: " + dealer);
         printScoreboard();
         printHands();
+    }
 
-        Player current = dealer;
-
+    private void playMoves(Player current) {
         while (countActiveRounders() > 1) {
             current.makeMove(bank);
             current = nextActivePlayer(current);
         }
+    }
 
-        // The loser is the player who has cards (took the bank)
+    private Player determineLoser() {
         Player start = players.getRandom();
         Player p = start;
         do {
