@@ -1,5 +1,6 @@
 package ru.anseranser.model;
 
+import lombok.Getter;
 import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayDeque;
@@ -11,9 +12,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 public class Game {
+    @Getter
     private final CircularDoublyLinkedList<Player> players;
     private final List<Card> deck;
     private final Map<Card.Suit, Deque<Card>> scoreboard;
@@ -167,16 +168,6 @@ public class Game {
         return count;
     }
 
-    private Player getActivePlayer() {
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer() && current.isRounder()) return current;
-            current = players.getNext(current);
-        } while (current != start);
-        return null;
-    }
-
     private Player nextActivePlayer(Player from) {
         Player next = players.getNext(from);
         while (!next.isGamer() || !next.isRounder()) {
@@ -298,13 +289,5 @@ public class Game {
             System.out.println(current + " hand: " + current.getHand());
             current = players.getNext(current);
         } while (current != start);
-    }
-
-    public CircularDoublyLinkedList<Player> getPlayers() {
-        return players;
-    }
-
-    public Player getDealer() {
-        return dealer;
     }
 }

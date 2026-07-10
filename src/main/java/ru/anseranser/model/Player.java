@@ -29,10 +29,6 @@ public class Player {
         } else return defending.suit() == trump;
     }
 
-    public boolean canBeat(Card attacking) {
-        return weakestDefense(attacking).isPresent();
-    }
-
     public Optional<Card> weakestDefense(Card attacking) {
         return hand.stream()
                 .filter(c -> canBeat(attacking, c))
@@ -52,25 +48,6 @@ public class Player {
         return "Player(trump=" + trump + ", cards=" + hand.size() + ")";
     }
 
-    // ---------- Выбор карты для отбоя ----------
-
-    public Card chooseBeatCard(List<Card> options) {
-        return options.stream()
-                .min(Comparator.comparing(c -> c.rank().getValue()))
-                .orElseThrow(() -> new IllegalStateException("No cards to hang up"));
-    }
-
-    // ---------- Выбор карты для хода ----------
-
-    /**
-     * Единая логика хода — как для первого хода в пустой банк (дилер / игрок после
-     * взятия банка), так и для хода второй картой после собственного отбоя.
-     * <p>
-     * Масть для хода ищется по кругу против направления игры, начиная с игрока,
-     * предшествующего текущему в общем массиве (для первого элемента массива —
-     * это последний элемент). Берётся наименьшая карта первой найденной подходящей
-     * масти. Если ни одна из чужих мастей не представлена в руке — ходим своим козырем.
-     */
     public Card chooseLeadCard() {
         Player current = this;
         for (int i = 0; i < table.size() - 1; i++) {
