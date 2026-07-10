@@ -33,7 +33,7 @@ public class Player {
         return hand.stream()
                 .filter(c -> canBeat(attacking, c))
                 .min(Comparator
-                        .comparing((Card c) -> c.suit() == trump) // некозыри сначала (false < true)
+                        .comparing((Card c) -> c.suit() == trump) // non-trumps first (false < true)
                         .thenComparing(c -> c.rank().getValue()));
     }
 
@@ -49,57 +49,78 @@ public class Player {
     }
 
     public Card chooseLeadCard() {
-        Player current = this;
-        for (int i = 0; i < table.size() - 1; i++) {
-            current = table.getPrevious(current);
-            Card.Suit suit = current.getTrump();
+            Player current = this;
+            for (int i = 0; i < table.size() - 1; i++) {
+                current = table.getPrevious(current);
+                Card.Suit suit = current.getTrump();
 
-            Optional<Card> smallest = hand.stream()
-                    .filter(c -> c.suit() == suit)
+                Optional<Card> smallest = hand.stream()
+                        .filter(c -> c.suit() == suit)
+                        .min(Comparator.comparing(c -> c.rank().getValue()));
+
+                if (smallest.isPresent()) {
+                    return smallest.get();
+                }
+            }
+
+            // First try to play lowest trump
+            Optional<Card> lowestTrump = hand.stream()
+                    .filter(c -> c.suit() == trump)
                     .min(Comparator.comparing(c -> c.rank().getValue()));
 
-            if (smallest.isPresent()) {
-                return smallest.get();
+            if (lowestTrump.isPresent()) {
+                return lowestTrump.get();
             }
-        }
 
-        return hand.stream()
-                .filter(c -> c.suit() == trump)
-                .min(Comparator.comparing(c -> c.rank().getValue()))
-                .orElseThrow(() -> new IllegalStateException("No cards to turn"));
-    }
+            // If no trumps, play lowest non-trump
+            return hand.stream()
+                    .min(Comparator.comparing(c -> c.rank().getValue()))
+                    .orElseThrow(() -> new IllegalStateException("No cards to turn"));
+        }
 
     public void makeMove(List<Card> bank) {
-        if (!rounder) return;
+            if (!rounder) return;
 
-        if (bank.isEmpty()) {
-            Card leadCard = chooseLeadCard();
-            bank.add(leadCard);
-            hand.remove(leadCard);
-            System.out.println("  " + this + " ходит: " + leadCard);
+            if (bank.isEmpty()) {
+                playLeadCard(bank);
+                if (hand.isEmpty()) rounder = false;
+                return;
+            }
+
+            Card topCard = bank.getLast();
+            Optional<Card> defense = weakestDefense(topCard);
+
+            if (defense.isEmpty()) {
+                takeBank(topCard, bank);
+                return;
+            }
+
+            beatCard(topCard, defense.get(), bank);
+
+            if (hand.isEmpty()) {
+                rounder = false;
+                return;
+            }
+
+            playLeadCard(bank);
             if (hand.isEmpty()) rounder = false;
-            return;
         }
 
-        Card topCard = bank.getLast();
-        Optional<Card> defense = weakestDefense(topCard);
-
-        if (defense.isEmpty()) {
-            System.out.println("  " + this + " не может побить " + topCard + " → забирает банк (" + bank.size() + " карт)");
-            takePot(bank);
-            return;
-        }
-
-        Card beatCard = defense.get();
-        bank.add(beatCard);
-        hand.remove(beatCard);
-        System.out.println("  " + this + " побивает " + topCard + " картой " + beatCard);
-        if (hand.isEmpty()) { rounder = false; return; }
-
+    private void playLeadCard(List<Card> bank) {
         Card leadCard = chooseLeadCard();
         bank.add(leadCard);
         hand.remove(leadCard);
         System.out.println("  " + this + " ходит: " + leadCard);
-        if (hand.isEmpty()) rounder = false;
+    }
+
+    private void takeBank(Card topCard, List<Card> bank) {
+        System.out.println("  " + this + " не может побить " + topCard + " → забирает банк (" + bank.size() + " карт)");
+        takePot(bank);
+    }
+
+    private void beatCard(Card topCard, Card beatCard, List<Card> bank) {
+        bank.add(beatCard);
+        hand.remove(beatCard);
+        System.out.println("  " + this + " побивает " + topCard + " картой " + beatCard);
     }
 }

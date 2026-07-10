@@ -4,7 +4,22 @@ import lombok.Getter;
 
 public record Card(Suit suit, Rank rank) {
     public enum Suit {
-        SPADES, CLUBS, DIAMONDS, HEARTS
+        SPADES('\u2660'), CLUBS('\u2663'), DIAMONDS('\u2666'), HEARTS('\u2665');
+
+        private final char symbol;
+
+        Suit(char symbol) {
+            this.symbol = symbol;
+        }
+
+        public char getSymbol() {
+            return symbol;
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(symbol);
+        }
     }
 
     @Getter
@@ -17,12 +32,10 @@ public record Card(Suit suit, Rank rank) {
         Rank(int value) {
             this.value = value;
         }
-
     }
 
     @Override
     public String toString() {
-        return rank + " of " + suit;
+        return rank + "" + suit.getSymbol();
     }
-
 }

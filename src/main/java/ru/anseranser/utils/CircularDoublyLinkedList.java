@@ -1,6 +1,6 @@
 package ru.anseranser.utils;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CircularDoublyLinkedList<T> {
     private static class Node<T> {
@@ -173,15 +173,15 @@ public class CircularDoublyLinkedList<T> {
     }
 
     public T getRandom() {
-        if (head == null) {
-            return null;
-        }
+            if (head == null) {
+                return null;
+            }
 
-        int index = new Random().nextInt(size);
-        Node<T> current = head;
-        for (int i = 0; i < index; i++) {
-            current = current.next;
+            int index = ThreadLocalRandom.current().nextInt(size);
+            Node<T> current = head;
+            for (int i = 0; i < index; i++) {
+                current = current.next;
+            }
+            return current.value;
         }
-        return current.value;
     }
-}
