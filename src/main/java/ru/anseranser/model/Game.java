@@ -4,11 +4,13 @@ import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 public class Game {
@@ -67,15 +69,11 @@ public class Game {
     public void shuffleAndDeal() {
         java.util.Collections.shuffle(deck);
 
-        Player start = players.getNext(dealer);
-        Player current = start;
-        int i = 0;
-        do {
+        Player current = players.getNext(dealer);
+        for (int i = 0; i < deck.size(); i++) {
             current.getHand().add(deck.get(i));
-            i++;
             current = players.getNext(current);
-        } while (current != start && i < deck.size());
-
+        }
         deck.clear();
     }
 
@@ -123,6 +121,131 @@ public class Game {
             t.from().getHand().remove(t.card());
             t.to().getHand().add(t.card());
         }
+    }
+
+    // ---------- Round helpers ----------
+
+    private void resetRounders() {
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer() && !current.getHand().isEmpty()) {
+                current.setRounder(true);
+            } else {
+                current.setRounder(false);
+            }
+            current = players.getNext(current);
+        } while (current != start);
+    }
+
+    private int countActiveRounders() {
+        int count = 0;
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer() && current.isRounder()) count++;
+            current = players.getNext(current);
+        } while (current != start);
+        return count;
+    }
+
+    private int countActiveGamers() {
+        int count = 0;
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer()) count++;
+            current = players.getNext(current);
+        } while (current != start);
+        return count;
+    }
+
+    private Player getActivePlayer() {
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer() && current.isRounder()) return current;
+            current = players.getNext(current);
+        } while (current != start);
+        return null;
+    }
+
+    private Player nextActivePlayer(Player from) {
+        Player next = players.getNext(from);
+        while (!next.isGamer() || !next.isRounder()) {
+            next = players.getNext(next);
+        }
+        return next;
+    }
+
+    // ---------- Round ----------
+
+    private Player playRound() {
+        List<Card> bank = new ArrayList<>();
+
+        shuffleAndDeal();
+        distributeObligatoryCards();
+        resetRounders();
+
+        Player current = dealer;
+
+        while (countActiveRounders() > 1) {
+            current.makeMove(bank);
+            current = nextActivePlayer(current);
+        }
+
+        return getActivePlayer();
+    }
+
+    private void registerLoss(Player loser) {
+        Card.Suit trump = loser.getTrump();
+        Optional<Card> lowestTrump = loser.getHand().stream()
+                .filter(c -> c.suit() == trump)
+                .min(Comparator.comparing(c -> c.rank().getValue()));
+
+        if (lowestTrump.isPresent()) {
+            Card card = lowestTrump.get();
+            loser.getHand().remove(card);
+            scoreboard.get(trump).push(card);
+        }
+    }
+
+    private void eliminatePlayers() {
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer() && !hasTrumps(current)) {
+                current.setGamer(false);
+                current.setRounder(false);
+            }
+            current = players.getNext(current);
+        } while (current != start);
+    }
+
+    private boolean hasTrumps(Player player) {
+        Card.Suit trump = player.getTrump();
+        return player.getHand().stream().anyMatch(c -> c.suit() == trump);
+    }
+
+    // ---------- Game ----------
+
+    public void playGame() {
+        while (countActiveGamers() > 1) {
+            Player loser = playRound();
+            registerLoss(loser);
+            eliminatePlayers();
+            dealer = loser;
+        }
+    }
+
+    public Player getWinner() {
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            if (current.isGamer()) return current;
+            current = players.getNext(current);
+        } while (current != start);
+        return null;
     }
 
     // ---------- Debug / print ----------

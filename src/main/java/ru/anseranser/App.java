@@ -3,13 +3,15 @@
  */
 package ru.anseranser;
 
-import ru.anseranser.model.CircularTable;
-import ru.anseranser.model.Table;
+import ru.anseranser.model.Game;
 
 public class App {
 
     public static void main(String[] args) {
-        CircularTable circularTable = new CircularTable();
-        System.out.println(circularTable);
+        Game game = new Game();
+        game.shuffleAndDeal();
+        game.distributeObligatoryCards();
+        game.printHands();
+
     }
 }
