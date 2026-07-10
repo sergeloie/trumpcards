@@ -3,28 +3,13 @@
  */
 package ru.anseranser;
 
-import ru.anseranser.model.Card;
-import ru.anseranser.model.Player;
-
-import java.util.ArrayList;
-
-import static ru.anseranser.model.Card.Rank.*;
-import static ru.anseranser.model.Card.Suit.*;
+import ru.anseranser.model.CircularTable;
+import ru.anseranser.model.Table;
 
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
-    }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
-        Card card = new Card(SPADES, SEVEN);
-        Card card1 = new Card(CLUBS, ACE);
-        for (Card.Suit suit : Card.Suit.values()) {
-            for (Card.Rank rank : Card.Rank.values()) {
-                Card card2 = new Card(suit, rank);
-            }
-        }
-        Player player = new Player(SPADES);
+        CircularTable circularTable = new CircularTable();
+        System.out.println(circularTable);
     }
 }

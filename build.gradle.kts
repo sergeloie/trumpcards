@@ -17,6 +17,7 @@ repositories {
 dependencies {
     implementation(libs.guava)
     implementation(libs.lombok)
+    annotationProcessor(libs.lombok)
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
