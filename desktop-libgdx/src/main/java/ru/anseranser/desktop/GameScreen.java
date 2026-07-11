@@ -92,24 +92,24 @@ final class GameScreen extends Table {
 
     /** Rebuild all widgets from the current game snapshot. Called on every event. */
     void refresh(Game game) {
-        statusLabel.setText("Trump: " + game.getTrump() + "   Players left: "
-                + countGamers(game));
+        statusLabel.setText(CardView.ascii("Trump: " + game.getTrump() + "   Players left: "
+                + countGamers(game)));
 
-        // Scoreboard (left, top)
+        // Scoreboard (left, top) — suit letters (S/H/D/C) are ASCII, font-safe.
         scoreboardGroup.clear();
         game.getScoreboard().snapshot().forEach((suit, stack) -> {
-            StringBuilder sb = new StringBuilder(localizer.suitName(suit) + ": ");
+            StringBuilder sb = new StringBuilder(localizer.suitLetter(suit) + ": ");
             for (Card c : stack) {
                 sb.append(localizer.cardName(c, CardLocalizer.Style.LETTERS)).append(" ");
             }
-            scoreboardGroup.addActor(new Label(sb.toString(), skin));
+            scoreboardGroup.addActor(new Label(CardView.ascii(sb.toString()), skin));
         });
 
         // Opponents (top-right): every gamer except the human seat (SPADES)
         opponentsGroup.clear();
         for (Player p : game.getPlayers()) {
             if (p.isGamer() && p.getTrump() != Card.Suit.SPADES) {
-                Label l = new Label(p + "  (" + p.getHand().size() + " cards)", skin);
+                Label l = new Label(CardView.ascii(p.getTrump().name() + "  (" + p.getHand().size() + " cards)"), skin);
                 opponentsGroup.addActor(l);
             }
         }
@@ -141,7 +141,7 @@ final class GameScreen extends Table {
     void setLog(List<String> lines) {
         logGroup.clear();
         for (String line : lines) {
-            Label l = new Label(line, skin);
+            Label l = new Label(CardView.ascii(line), skin);
             l.setWrap(true);
             logGroup.addActor(l);
         }

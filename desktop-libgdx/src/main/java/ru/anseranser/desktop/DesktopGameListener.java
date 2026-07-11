@@ -2,6 +2,7 @@ package ru.anseranser.desktop;
 
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
+import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.model.Card;
 import ru.anseranser.model.Game;
 import ru.anseranser.model.Player;
@@ -56,31 +57,41 @@ public final class DesktopGameListener implements GameListener {
         } else if (event instanceof GameEvent.RoundStarted s) {
             StringBuilder sb = new StringBuilder("Round started. Hands: ");
             for (Player p : game.getPlayers()) {
-                if (p.isGamer()) sb.append(p).append("=").append(p.getHand().size()).append(" ");
+                if (p.isGamer()) sb.append(p.getTrump().name()).append("=").append(p.getHand().size()).append(" ");
             }
             record(sb.toString());
             repaint();
         } else if (event instanceof GameEvent.CardPlayed e) {
-            record(e.player() + " plays " + e.card());
+            record(seat(e.player()) + " plays " + card(e.card()));
             repaint();
         } else if (event instanceof GameEvent.CardBeaten e) {
-            record(e.player() + " beats " + e.attacking() + " with " + e.beating());
+            record(seat(e.player()) + " beats " + card(e.attacking()) + " with " + card(e.beating()));
             repaint();
         } else if (event instanceof GameEvent.PotTaken e) {
-            record(e.player() + " takes the pot (" + e.potSize() + " cards)");
+            record(seat(e.player()) + " takes the pot (" + e.potSize() + " cards)");
             repaint();
         } else if (event instanceof GameEvent.RoundEnded e) {
             if (e.pushedToScoreboard() != null) {
-                record(e.loser() + " adds " + e.pushedToScoreboard() + " to the scoreboard");
+                record(seat(e.loser()) + " adds " + card(e.pushedToScoreboard()) + " to the scoreboard");
             }
             if (e.eliminated()) {
-                record(e.loser() + " is eliminated (ladder complete)");
+                record(seat(e.loser()) + " is eliminated (ladder complete)");
             }
             repaint();
         } else if (event instanceof GameEvent.GameEnded e) {
-            record("Game over. Winner: " + e.winner());
+            record("Game over. Winner: " + seat(e.winner()));
             repaint();
         }
+    }
+
+    /** ASCII-safe seat name (the player's trump suit), e.g. "SPADES". */
+    private String seat(Player p) {
+        return p.getTrump().name();
+    }
+
+    /** ASCII-safe short card label, e.g. "AS", "7H". */
+    private String card(Card c) {
+        return new CardLocalizer(CardLocalizer.Style.LETTERS).cardName(c);
     }
 
     /** Exposed for callers that want a fresh log line after a manual action. */

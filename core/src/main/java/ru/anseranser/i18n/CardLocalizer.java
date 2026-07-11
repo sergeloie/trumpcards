@@ -83,6 +83,21 @@ public class CardLocalizer {
         return messages.get("card.rank." + rank.name().toLowerCase() + ".short");
     }
 
+    /** Language-independent ASCII rank code used by the LETTERS style (6/7/8/9/10/J/Q/K/A). */
+    public String rankLetter(Card.Rank rank) {
+        return switch (rank) {
+            case SIX -> "6";
+            case SEVEN -> "7";
+            case EIGHT -> "8";
+            case NINE -> "9";
+            case TEN -> "10";
+            case JACK -> "J";
+            case QUEEN -> "Q";
+            case KING -> "K";
+            case ACE -> "A";
+        };
+    }
+
     /**
      * Localized name of a card in this localizer's {@link Style}. With {@code FULL}
      * the result is the word form; with {@code SHORT} the compact glyph form.
@@ -97,7 +112,7 @@ public class CardLocalizer {
             return rankShort(card.rank()) + suitSymbol(card.suit());
         }
         if (override == Style.LETTERS) {
-            return rankShort(card.rank()) + suitLetter(card.suit());
+            return rankLetter(card.rank()) + suitLetter(card.suit());
         }
         return messages.get("card.format.full", rankName(card.rank()), suitName(card.suit()));
     }

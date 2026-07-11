@@ -33,7 +33,10 @@ final class CardView extends Container<Label> {
     }
 
     CardView(Card card, Skin skin, CardLocalizer localizer, ClickHandler onClick) {
-        Label label = new Label(localizer.cardName(card, CardLocalizer.Style.LETTERS), skin);
+        // The default BitmapFont only ships ASCII glyphs; keep text ASCII-safe so
+        // a missing glyph can never throw (GlyphLayout NPE). Suit letters / ranks
+        // are already ASCII via CardLocalizer.LETTERS.
+        Label label = new Label(ascii(localizer.cardName(card, CardLocalizer.Style.LETTERS)), skin);
         label.setColor(suitColor(card.suit()));
         setActor(label);
         setSize(CARD_W, CARD_H);
@@ -60,4 +63,15 @@ final class CardView extends Container<Label> {
 
     float cardWidth() { return CARD_W; }
     float cardHeight() { return CARD_H; }
+
+    /** Keep text within the default BitmapFont's ASCII glyph range (others -> '?'). */
+    static String ascii(String s) {
+        if (s == null) return "";
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            b.append(c <= 127 ? c : '?');
+        }
+        return b.toString();
+    }
 }
