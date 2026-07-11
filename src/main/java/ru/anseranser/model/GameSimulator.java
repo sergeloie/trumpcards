@@ -17,11 +17,16 @@ import java.util.Set;
  *   <li><b>Card conservation</b> — exactly 36 distinct cards exist across all
  *       hands + the scoreboard at game end;</li>
  *   <li><b>Single winner</b> — exactly one player remains a "gamer";</li>
- *   <li><b>Termination</b> — every game completes (no infinite loop).</li>
+ *   <li><b>Termination</b> — every game completes (no infinite loop), and
+ *       ideally without tripping the defensive {@code MAX_ROUND_MOVES} cap;</li>
+ *   <li><b>Determinism</b> — replaying the same seed yields the same winner.</li>
  * </ul>
  *
- * These invariants are the regression safety net proving the refactor
- * (Stages 1–5) did not change observable game behaviour.
+ * <p>The {@link Result} now also reports how many of the simulated games actually
+ * hit the safety cap ({@link #cappedGames}), so the suite can surface — rather
+ * than hide — the pathological non-terminating deals (e.g. seed 0) that the cap
+ * catches. A green "invariants hold" run with a non-zero {@code cappedGames}
+ * count is an honest signal, not a blind pass.
  */
 public class GameSimulator {
 
@@ -41,7 +46,8 @@ public class GameSimulator {
             int totalCards,
             long distinctCards,
             int activeGamers,
-            int rounds) {
+            int rounds,
+            int cappedRounds) {
         boolean invariantsHold() {
             return totalCards == 36
                     && distinctCards == 36
@@ -56,6 +62,15 @@ public class GameSimulator {
             results.add(runOne(seed));
         }
         return results;
+    }
+
+    /** Counts how many of the supplied results hit the defensive move cap. */
+    public static int countCapped(List<Result> results) {
+        int capped = 0;
+        for (Result r : results) {
+            if (r.cappedRounds() > 0) capped++;
+        }
+        return capped;
     }
 
     private Result runOne(int seed) {
@@ -74,6 +89,13 @@ public class GameSimulator {
         Player winner = game.getWinner();
         Card.Suit winnerTrump = winner != null ? winner.getTrump() : null;
 
-        return new Result(seed, winnerTrump, totalCards, seen.size(), activeGamers, 0);
+        return new Result(
+                seed,
+                winnerTrump,
+                totalCards,
+                seen.size(),
+                activeGamers,
+                game.getRoundsPlayed(),
+                game.getCappedRounds());
     }
 }

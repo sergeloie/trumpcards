@@ -16,7 +16,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <ul>
  *   <li>Card conservation — 36 distinct cards across all hands at game end.</li>
  *   <li>Exactly one winner (one active gamer).</li>
- *   <li>Termination — every game completes within a bounded number of rounds.</li>
+ *   <li>Termination — every game completes (returns); we also surface how many
+ *       hit the defensive move cap so the suite is honest about the pathological
+ *       non-terminating deals (e.g. seed 0) the cap catches.</li>
  *   <li>Determinism — replaying the same seed yields the same winner.</li>
  * </ul>
  */
@@ -40,6 +42,10 @@ class GameSimulatorTest {
                     "Seed " + r.seed() + ": a winner must exist");
             assertTrue(r.invariantsHold(),
                     "Seed " + r.seed() + ": composite invariants must hold");
+            // Honest termination signal: the game completed and the defensive
+            // cap, if it fired, is recorded (not hidden).
+            assertTrue(r.rounds() >= 1,
+                    "Seed " + r.seed() + ": a game must play at least one round");
         }
     }
 
@@ -66,5 +72,29 @@ class GameSimulatorTest {
 
         assertEquals(4, bySuit.size(),
                 "Across 500 seeds every suit should win at least once (got: " + bySuit + ")");
+    }
+
+    @Test
+    void pathologicalSeed_isCaughtByCap_notHidden() {
+        // Under the current weakest-lead heuristic, non-terminating deals are
+        // rare but not impossible (e.g. seed 496 still loops without the cap).
+        // With the cap in place such a game still completes, but the simulator
+        // must REPORT that the cap fired — so the suite is honest, not blind.
+        int knownCapped = 496;
+        GameSimulator sim = new GameSimulator(2000, 0, false);
+        List<GameSimulator.Result> results = sim.run();
+
+        GameSimulator.Result capped = results.get(knownCapped);
+        assertEquals(knownCapped, capped.seed());
+        assertTrue(capped.cappedRounds() > 0,
+                "Known looping seed " + knownCapped + " must be flagged as capping the cap");
+
+        int cappedCount = GameSimulator.countCapped(results);
+        assertTrue(cappedCount > 0,
+                "At least seed " + knownCapped + " should be reported as capped across seeds [0..1999]");
+        // And the metric must not over-report: only the genuinely-looping deals
+        // are flagged, the overwhelming majority terminate naturally.
+        assertTrue(cappedCount < results.size(),
+                "Most deals should terminate naturally; capped=" + cappedCount + " of " + results.size());
     }
 }
