@@ -6,23 +6,27 @@ import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
 import ru.anseranser.event.NopListener;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+/**
+ * Orchestrates a full game: deals rounds, runs moves, determines the loser of
+ * each round, and eliminates players whose trump ladder completes (ACE).
+ *
+ * <p>Delegates deck/shuffle/dealing to {@link Dealer} and scoring/elimination
+ * rules to {@link Scoreboard} (both extracted in refactor Stage 4). The only
+ * remaining responsibilities here are round orchestration and game flow.
+ */
 public class Game {
     @Getter
     private final TurnOrder players;
-    private final List<Card> deck;
-    private final Map<Card.Suit, Deque<Card>> scoreboard;
-    private Player dealer;
+    private final Dealer dealer = new Dealer();
+    private final Scoreboard scoreboard = new Scoreboard();
+    private Player dealerSeat;
     private final List<Card> bank = new ArrayList<>();
     private final boolean humanPlayer;
     @Getter
@@ -53,20 +57,8 @@ public class Game {
             p.setOrder(players);
         }
 
-        deck = new ArrayList<>();
-        for (Card.Suit suit : Card.Suit.values()) {
-            for (Card.Rank rank : Card.Rank.values()) {
-                deck.add(new Card(suit, rank));
-            }
-        }
-
-        scoreboard = new HashMap<>();
-        for (Card.Suit suit : Card.Suit.values()) {
-            scoreboard.put(suit, new ArrayDeque<>());
-        }
-
-        initScoreboard();
-        dealer = players.get(0);
+        scoreboard.init(dealer.deck());
+        dealerSeat = players.get(0);
     }
 
     public void setListener(GameListener listener) {
@@ -76,28 +68,7 @@ public class Game {
         }
     }
 
-    // ---------- Setup ----------
-
-    private void initScoreboard() {
-        for (Card.Suit suit : Card.Suit.values()) {
-            Card six = extractCard(suit, Card.Rank.SIX);
-            scoreboard.get(suit).push(six);
-        }
-    }
-
-    private Card extractCard(Card.Suit suit, Card.Rank rank) {
-        Iterator<Card> it = deck.iterator();
-        while (it.hasNext()) {
-            Card c = it.next();
-            if (c.suit() == suit && c.rank() == rank) {
-                it.remove();
-                return c;
-            }
-        }
-        throw new IllegalStateException("Card " + rank + " of " + suit + " not found in the deck");
-    }
-
-    // ---------- Dealing ----------
+    // ---------- Setup / dealing ----------
 
     public void shuffleAndDeal() {
         shuffleAndDeal(this.rng);
@@ -105,32 +76,16 @@ public class Game {
 
     /** Test seam: same as {@link #shuffleAndDeal()} but uses the supplied RNG. */
     void shuffleAndDeal(Random rng) {
-        java.util.Collections.shuffle(deck, rng);
-
-        Player current = players.nextActive(dealer, Player::isGamer);
-
-        for (int i = 0; i < deck.size(); i++) {
-            current.getHand().add(deck.get(i));
-            current = players.nextActive(current, Player::isGamer);
-        }
-        deck.clear();
+        dealer.shuffle(rng);
+        dealer.deal(players, dealerSeat, Player::isGamer);
     }
 
     // ---------- Obligatory-card exchange ----------
 
-    private Card.Rank nextRequiredRank(Card.Suit suit) {
-        Deque<Card> stack = scoreboard.get(suit);
-        if (stack.isEmpty()) return null;
-        Card.Rank lastRemoved = stack.peek().rank();
-        Card.Rank[] ranks = Card.Rank.values();
-        int nextOrdinal = lastRemoved.ordinal() + 1;
-        return nextOrdinal >= ranks.length ? null : ranks[nextOrdinal];
-    }
-
     private record Transfer(Player from, Card card, Player to) {}
 
     public void distributeObligatoryCards() {
-        Map<Card.Suit, Player> ownerBySuit = new HashMap<>();
+        Map<Card.Suit, Player> ownerBySuit = new java.util.HashMap<>();
         for (Player p : players) {
             ownerBySuit.put(p.getTrump(), p);
         }
@@ -142,7 +97,7 @@ public class Game {
                 Card.Suit suit = card.suit();
                 if (suit == current.getTrump()) continue;
 
-                Card.Rank required = nextRequiredRank(suit);
+                Card.Rank required = scoreboard.nextRequiredRank(suit);
                 if (required == null || required == Card.Rank.ACE) continue;
 
                 if (card.rank() == required) {
@@ -187,7 +142,7 @@ public class Game {
     private Player playRound() {
         setupRound();
 
-        Player current = dealer;
+        Player current = dealerSeat;
         playMoves(current);
 
         return determineLoser();
@@ -200,7 +155,7 @@ public class Game {
         resetRounders();
 
         listener.onEvent(new GameEvent.RoundStarted(
-                dealer,
+                dealerSeat,
                 snapshotScoreboard(),
                 snapshotHands()));
     }
@@ -227,14 +182,15 @@ public class Game {
 
     // ---------- Game ----------
 
-    private boolean endRound(Player loser, List<Card> bank) {
-        deck.addAll(loser.getHand());
+    private boolean endRound(Player loser) {
+        // Collect all cards the loser still holds plus the round's bank.
+        List<Card> pile = new ArrayList<>(loser.getHand());
         loser.getHand().clear();
-        deck.addAll(bank);
+        pile.addAll(bank);
         bank.clear();
 
         Card.Suit trump = loser.getTrump();
-        Optional<Card> lowestTrump = deck.stream()
+        Optional<Card> lowestTrump = pile.stream()
                 .filter(c -> c.suit() == trump)
                 .min(Comparator.comparing(c -> c.rank().getValue()));
 
@@ -242,13 +198,16 @@ public class Game {
         boolean eliminated;
         if (lowestTrump.isPresent()) {
             Card card = lowestTrump.get();
-            deck.remove(card);
-            scoreboard.get(trump).push(card);
+            pile.remove(card);
             pushed = card;
-            eliminated = card.rank() == Card.Rank.ACE;
+            eliminated = scoreboard.pushAndEliminates(card);
         } else {
+            // No trumps left at all: the ladder is already complete → eliminated.
             eliminated = true;
         }
+
+        // Return remaining cards to the shared deck pool for the next round.
+        dealer.deck().addAll(pile);
 
         listener.onEvent(new GameEvent.RoundEnded(
                 loser, pushed, snapshotScoreboard(), eliminated));
@@ -270,12 +229,12 @@ public class Game {
         while (countActiveGamers() > 1) {
             Player loser = playRound();
             if (loser == null) break;
-            boolean eliminated = endRound(loser, bank);
+            boolean eliminated = endRound(loser);
             if (eliminated) {
                 loser.setGamer(false);
                 loser.setRounder(false);
             }
-            dealer = nextDealer(loser);
+            dealerSeat = nextDealer(loser);
         }
         listener.onEvent(new GameEvent.GameEnded(getWinner()));
     }
@@ -290,15 +249,11 @@ public class Game {
     // ---------- Snapshots (replaces debug/print) ----------
 
     private Map<Card.Suit, List<Card>> snapshotScoreboard() {
-        Map<Card.Suit, List<Card>> snapshot = new HashMap<>();
-        for (Card.Suit suit : Card.Suit.values()) {
-            snapshot.put(suit, new ArrayList<>(scoreboard.get(suit)));
-        }
-        return snapshot;
+        return scoreboard.snapshot();
     }
 
     private Map<Player, List<Card>> snapshotHands() {
-        Map<Player, List<Card>> hands = new HashMap<>();
+        Map<Player, List<Card>> hands = new java.util.HashMap<>();
         for (Player p : players) {
             hands.put(p, new ArrayList<>(p.getHand()));
         }
