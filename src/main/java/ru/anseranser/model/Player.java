@@ -110,17 +110,17 @@ public class Player {
         Card leadCard = chooseLeadCard();
         bank.add(leadCard);
         hand.remove(leadCard);
-        System.out.println("  " + this + " ходит: " + leadCard);
+        System.out.println("  " + this + " moves: " + leadCard);
     }
 
     protected void takeBank(Card topCard, List<Card> bank) {
-        System.out.println("  " + this + " не может побить " + topCard + " → забирает банк (" + bank.size() + " карт)");
+        System.out.println("  " + this + " can`t beat " + topCard + " → take pot (" + bank.size() + " cards)");
         takePot(bank);
     }
 
     protected void beatCard(Card topCard, Card beatCard, List<Card> bank) {
         bank.add(beatCard);
         hand.remove(beatCard);
-        System.out.println("  " + this + " побивает " + topCard + " картой " + beatCard);
+        System.out.println("  " + this + " beat " + topCard + " by card " + beatCard);
     }
 }

@@ -207,8 +207,8 @@ public class Game {
         distributeObligatoryCards();
         resetRounders();
 
-        System.out.println("\n===== РАУНД =====");
-        System.out.println("Дилер: " + dealer);
+        System.out.println("\n===== ROUND =====");
+        System.out.println("Dealer: " + dealer);
         printScoreboard();
         printHands();
     }
@@ -244,8 +244,8 @@ public class Game {
     // ---------- Game ----------
 
     private boolean endRound(Player loser, List<Card> bank) {
-        System.out.println("\n--- Конец раунда ---");
-        System.out.println("Проигравший: " + loser);
+        System.out.println("\n--- End of Round ---");
+        System.out.println("Looser: " + loser);
 
         deck.addAll(loser.getHand());
         loser.getHand().clear();
@@ -261,7 +261,7 @@ public class Game {
             Card card = lowestTrump.get();
             deck.remove(card);
             scoreboard.get(trump).push(card);
-            System.out.println("На scoreboard " + trump + " выкладывается: " + card);
+            System.out.println("To scoreboard " + trump + " pushed: " + card);
             printScoreboard();
             return card.rank() == Card.Rank.ACE;
         }
@@ -269,20 +269,20 @@ public class Game {
     }
 
     public void playGame() {
-        System.out.println("=== НАЧАЛО ИГРЫ ===");
+        System.out.println("=== THE GAME BEGINS ===");
         while (countActiveGamers() > 1) {
             Player loser = playRound();
             if (loser == null) break;
             boolean eliminated = endRound(loser, bank);
             if (eliminated) {
-                System.out.println(">>> " + loser + " выбывает из игры (козырь исчерпан) <<<");
+                System.out.println(">>> " + loser + " KICKED OUT from game(no more trumps) <<<");
                 loser.setGamer(false);
                 loser.setRounder(false);
             }
             dealer = nextDealer(loser);
         }
-        System.out.println("\n=== ИГРА ОКОНЧЕНА ===");
-        System.out.println("Победитель: " + getWinner());
+        System.out.println("\n=== GAME ENDED ===");
+        System.out.println("Winner is: " + getWinner());
     }
 
     public Player getWinner() {

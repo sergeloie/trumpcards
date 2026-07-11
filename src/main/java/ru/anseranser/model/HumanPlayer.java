@@ -32,7 +32,7 @@ public class HumanPlayer extends Player {
             Card leadCard = chooseLeadCardInteractive();
             bank.add(leadCard);
             getHand().remove(leadCard);
-            System.out.println("  Вы ходите: " + leadCard);
+            System.out.println("  Your move: " + leadCard);
             if (getHand().isEmpty()) setRounder(false);
             return;
         }
@@ -41,7 +41,7 @@ public class HumanPlayer extends Player {
         Optional<Card> defense = weakestDefense(topCard);
 
         if (defense.isEmpty()) {
-            System.out.println("  Вы не можете побить " + topCard + " → забираете банк (" + bank.size() + " карт)");
+            System.out.println("  You can`t beat " + topCard + " → take the pot (" + bank.size() + " cards)");
             takePot(bank);
             return;
         }
@@ -50,26 +50,26 @@ public class HumanPlayer extends Player {
         Card beatCard = chooseDefenseCard(topCard, defense.get());
         bank.add(beatCard);
         getHand().remove(beatCard);
-        System.out.println("  Вы побиваете " + topCard + " картой " + beatCard);
+        System.out.println("  You beat " + topCard + " by card " + beatCard);
         if (getHand().isEmpty()) { setRounder(false); return; }
 
         // Human leads next
         Card leadCard = chooseLeadCardInteractive();
         bank.add(leadCard);
         getHand().remove(leadCard);
-        System.out.println("  Вы ходите: " + leadCard);
+        System.out.println("  You put : " + leadCard);
         if (getHand().isEmpty()) setRounder(false);
     }
 
     private Card chooseLeadCardInteractive() {
         List<Card> hand = getHand();
-        System.out.println("\nВаши карты:");
+        System.out.println("\nYour cards:");
         for (int i = 0; i < hand.size(); i++) {
             System.out.println("  " + (i + 1) + ") " + hand.get(i));
         }
 
         while (true) {
-            System.out.print("Выберите карту для хода (1-" + hand.size() + "): ");
+            System.out.print("Choose card to move (1-" + hand.size() + "): ");
             String input = scanner.nextLine().trim();
             try {
                 int choice = Integer.parseInt(input);
@@ -77,7 +77,7 @@ public class HumanPlayer extends Player {
                     return hand.get(choice - 1);
                 }
             } catch (NumberFormatException ignored) {}
-            System.out.println("Неверный ввод. Попробуйте снова.");
+            System.out.println("Invalid input. Try again.");
         }
     }
 
@@ -88,16 +88,16 @@ public class HumanPlayer extends Player {
                         .thenComparing(c -> c.rank().getValue()))
                 .toList();
 
-        System.out.println("\nМожете побить " + attacking + " одной из карт:");
+        System.out.println("\nCan beat " + attacking + " one of cards:");
         for (int i = 0; i < validDefenses.size(); i++) {
             Card c = validDefenses.get(i);
-            String marker = (c.equals(suggestedDefense)) ? " (рекомендуется)" : "";
+            String marker = (c.equals(suggestedDefense)) ? " (recommended)" : "";
             System.out.println("  " + (i + 1) + ") " + c + marker);
         }
-        System.out.println("  " + (validDefenses.size() + 1) + ") Взять банк");
+        System.out.println("  " + (validDefenses.size() + 1) + ") Take pot");
 
         while (true) {
-            System.out.print("Выберите карту (1-" + (validDefenses.size() + 1) + "): ");
+            System.out.print("Choose card (1-" + (validDefenses.size() + 1) + "): ");
             String input = scanner.nextLine().trim();
             try {
                 int choice = Integer.parseInt(input);
@@ -109,7 +109,7 @@ public class HumanPlayer extends Player {
                     return null;
                 }
             } catch (NumberFormatException ignored) {}
-            System.out.println("Неверный ввод. Попробуйте снова.");
+            System.out.println("Invalid input. Try again.");
         }
     }
 }
