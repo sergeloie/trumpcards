@@ -3,6 +3,9 @@ package ru.anseranser.model;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import ru.anseranser.event.GameEvent;
+import ru.anseranser.event.GameListener;
+import ru.anseranser.event.NopListener;
 import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayList;
@@ -22,6 +25,8 @@ public class Player {
     private boolean rounder = true;
     @Setter
     private CircularDoublyLinkedList<Player> table;
+    @Setter
+    protected GameListener listener = NopListener.INSTANCE;
 
     protected boolean canBeat(Card attacking, Card defending) {
         if (attacking.suit() == defending.suit()) {
@@ -110,17 +115,17 @@ public class Player {
         Card leadCard = chooseLeadCard();
         bank.add(leadCard);
         hand.remove(leadCard);
-        System.out.println("  " + this + " moves: " + leadCard);
+        listener.onEvent(new GameEvent.CardPlayed(this, leadCard));
     }
 
     protected void takeBank(Card topCard, List<Card> bank) {
-        System.out.println("  " + this + " can`t beat " + topCard + " → take pot (" + bank.size() + " cards)");
+        listener.onEvent(new GameEvent.PotTaken(this, topCard, bank.size()));
         takePot(bank);
     }
 
     protected void beatCard(Card topCard, Card beatCard, List<Card> bank) {
         bank.add(beatCard);
         hand.remove(beatCard);
-        System.out.println("  " + this + " beat " + topCard + " by card " + beatCard);
+        listener.onEvent(new GameEvent.CardBeaten(this, topCard, beatCard));
     }
 }

@@ -1,6 +1,9 @@
 package ru.anseranser.model;
 
 import lombok.Getter;
+import ru.anseranser.event.GameEvent;
+import ru.anseranser.event.GameListener;
+import ru.anseranser.event.NopListener;
 import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayDeque;
@@ -21,6 +24,8 @@ public class Game {
     private Player dealer;
     private final List<Card> bank = new ArrayList<>();
     private final boolean humanPlayer;
+    @Getter
+    private GameListener listener = NopListener.INSTANCE;
 
     public Game() {
         this(false);
@@ -57,6 +62,16 @@ public class Game {
 
         initScoreboard();
         dealer = players.getRandom();
+    }
+
+    public void setListener(GameListener listener) {
+        this.listener = listener;
+        Player start = players.getRandom();
+        Player current = start;
+        do {
+            current.setListener(listener);
+            current = players.getNext(current);
+        } while (current != start);
     }
 
     // ---------- Setup ----------
@@ -207,10 +222,10 @@ public class Game {
         distributeObligatoryCards();
         resetRounders();
 
-        System.out.println("\n===== ROUND =====");
-        System.out.println("Dealer: " + dealer);
-        printScoreboard();
-        printHands();
+        listener.onEvent(new GameEvent.RoundStarted(
+                dealer,
+                snapshotScoreboard(),
+                snapshotHands()));
     }
 
     private void playMoves(Player current) {
@@ -244,9 +259,6 @@ public class Game {
     // ---------- Game ----------
 
     private boolean endRound(Player loser, List<Card> bank) {
-        System.out.println("\n--- End of Round ---");
-        System.out.println("Looser: " + loser);
-
         deck.addAll(loser.getHand());
         loser.getHand().clear();
         deck.addAll(bank);
@@ -257,32 +269,36 @@ public class Game {
                 .filter(c -> c.suit() == trump)
                 .min(Comparator.comparing(c -> c.rank().getValue()));
 
+        Card pushed = null;
+        boolean eliminated;
         if (lowestTrump.isPresent()) {
             Card card = lowestTrump.get();
             deck.remove(card);
             scoreboard.get(trump).push(card);
-            System.out.println("To scoreboard " + trump + " pushed: " + card);
-            printScoreboard();
-            return card.rank() == Card.Rank.ACE;
+            pushed = card;
+            eliminated = card.rank() == Card.Rank.ACE;
+        } else {
+            eliminated = true;
         }
-        return true;
+
+        listener.onEvent(new GameEvent.RoundEnded(
+                loser, pushed, snapshotScoreboard(), eliminated));
+        return eliminated;
     }
 
     public void playGame() {
-        System.out.println("=== THE GAME BEGINS ===");
+        listener.onEvent(new GameEvent.GameStarted());
         while (countActiveGamers() > 1) {
             Player loser = playRound();
             if (loser == null) break;
             boolean eliminated = endRound(loser, bank);
             if (eliminated) {
-                System.out.println(">>> " + loser + " KICKED OUT from game(no more trumps) <<<");
                 loser.setGamer(false);
                 loser.setRounder(false);
             }
             dealer = nextDealer(loser);
         }
-        System.out.println("\n=== GAME ENDED ===");
-        System.out.println("Winner is: " + getWinner());
+        listener.onEvent(new GameEvent.GameEnded(getWinner()));
     }
 
     public Player getWinner() {
@@ -295,22 +311,24 @@ public class Game {
         return null;
     }
 
-    // ---------- Debug / print ----------
+    // ---------- Snapshots (replaces debug/print) ----------
 
-    public void printScoreboard() {
-        System.out.println("Scoreboard:");
+    private Map<Card.Suit, List<Card>> snapshotScoreboard() {
+        Map<Card.Suit, List<Card>> snapshot = new HashMap<>();
         for (Card.Suit suit : Card.Suit.values()) {
-            Deque<Card> stack = scoreboard.get(suit);
-            System.out.println("  " + suit + ": " + stack);
+            snapshot.put(suit, new ArrayList<>(scoreboard.get(suit)));
         }
+        return snapshot;
     }
 
-    public void printHands() {
+    private Map<Player, List<Card>> snapshotHands() {
+        Map<Player, List<Card>> hands = new HashMap<>();
         Player start = players.getRandom();
         Player current = start;
         do {
-            System.out.println(current + " hand: " + current.getHand());
+            hands.put(current, new ArrayList<>(current.getHand()));
             current = players.getNext(current);
         } while (current != start);
+        return hands;
     }
 }
