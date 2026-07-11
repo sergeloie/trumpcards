@@ -246,6 +246,19 @@ public class Game {
         return null;
     }
 
+    /** All cards still in play: every hand, every scoreboard stack, and the dealer's deck pool. */
+    public List<Card> allCards() {
+        List<Card> all = new ArrayList<>();
+        for (Player p : players) {
+            all.addAll(p.getHand());
+        }
+        for (List<Card> stack : scoreboard.snapshot().values()) {
+            all.addAll(stack);
+        }
+        all.addAll(dealer.deck());
+        return all;
+    }
+
     // ---------- Snapshots (replaces debug/print) ----------
 
     private Map<Card.Suit, List<Card>> snapshotScoreboard() {
