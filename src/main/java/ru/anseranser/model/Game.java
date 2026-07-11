@@ -111,17 +111,11 @@ public class Game {
 
     // ---------- Round helpers ----------
 
-    private void resetRounders() {
-        for (Player p : players) {
-            boolean active = p.isGamer() && !p.getHand().isEmpty();
-            p.setRounder(active);
-        }
-    }
-
-    private int countActiveRounders() {
+    /** Players still in the round: active gamers holding at least one card. */
+    private int countActiveGamersWithCards() {
         int count = 0;
         for (Player p : players) {
-            if (p.isGamer() && p.isRounder()) count++;
+            if (p.isGamer() && !p.getHand().isEmpty()) count++;
         }
         return count;
     }
@@ -142,7 +136,8 @@ public class Game {
      * "taker stays in the round, drops out only on an empty hand" rule and with no
      * draw pile, two players can pass the same trumps back and forth forever
      * (proven by GameSimulator: e.g. seed 0 loops 2M+ moves). When the bound is
-     * hit we end the round and pick the rounder holding the most cards as the
+     * hit we end the round and pick the player (still holding cards) with the
+     * most cards as the
      * loser — the natural "last player with cards" outcome. This is a defensive
      * guard, not a rules change: it never fires on a deal that would terminate
      * normally.
@@ -155,7 +150,7 @@ public class Game {
         Player current = dealerSeat;
         int moves = playMoves(current);
 
-        if (moves >= MAX_ROUND_MOVES && countActiveRounders() > 1) {
+        if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
             // Pathological non-terminating deal — fall back to "most cards loses".
             return mostCardsRounder();
         }
@@ -166,7 +161,6 @@ public class Game {
         bank.clear();
         shuffleAndDeal();
         distributeObligatoryCards();
-        resetRounders();
 
         listener.onEvent(new GameEvent.RoundStarted(
                 dealerSeat,
@@ -179,9 +173,9 @@ public class Game {
      */
     private int playMoves(Player current) {
         int moves = 0;
-        while (countActiveRounders() > 1 && moves < MAX_ROUND_MOVES) {
+        while (countActiveGamersWithCards() > 1 && moves < MAX_ROUND_MOVES) {
             current.makeMove(bank);
-            current = players.nextActive(current, p -> p.isGamer() && p.isRounder());
+            current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
             moves++;
         }
         return moves;
@@ -189,7 +183,7 @@ public class Game {
 
     private Player determineLoser() {
         for (Player p : players) {
-            if (p.isGamer() && p.isRounder() && !p.getHand().isEmpty()) {
+            if (p.isGamer() && !p.getHand().isEmpty()) {
                 return p;
             }
         }
@@ -200,7 +194,7 @@ public class Game {
     private Player mostCardsRounder() {
         Player best = null;
         for (Player p : players) {
-            if (p.isGamer() && p.isRounder() && !p.getHand().isEmpty()) {
+            if (p.isGamer() && !p.getHand().isEmpty()) {
                 if (best == null || p.getHand().size() > best.getHand().size()) {
                     best = p;
                 }
@@ -265,7 +259,6 @@ public class Game {
             boolean eliminated = endRound(loser);
             if (eliminated) {
                 loser.setGamer(false);
-                loser.setRounder(false);
             }
             dealerSeat = nextDealer(loser);
         }

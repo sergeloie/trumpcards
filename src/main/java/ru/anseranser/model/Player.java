@@ -21,8 +21,6 @@ public class Player {
     @Setter
     private boolean gamer = true;
     @Setter
-    private boolean rounder = true;
-    @Setter
     protected GameListener listener = NopListener.INSTANCE;
 
     protected boolean canBeat(Card attacking, Card defending) {
@@ -61,11 +59,10 @@ public class Player {
     }
 
     public void makeMove(List<Card> bank) {
-        if (!rounder) return;
+        if (hand.isEmpty()) return;
 
         if (bank.isEmpty()) {
             playLeadCard(bank);
-            if (hand.isEmpty()) rounder = false;
             return;
         }
 
@@ -81,12 +78,10 @@ public class Player {
         beatCard(topCard, chosen, bank);
 
         if (hand.isEmpty()) {
-            rounder = false;
             return;
         }
 
         playLeadCard(bank);
-        if (hand.isEmpty()) rounder = false;
     }
 
     /**
