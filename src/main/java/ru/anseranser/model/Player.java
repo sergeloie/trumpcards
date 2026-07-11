@@ -53,32 +53,12 @@ public class Player {
     }
 
     public Card chooseLeadCard() {
-        Player current = this;
-        for (int i = 0; i < order.size() - 1; i++) {
-            current = order.previous(current);
-            Card.Suit suit = current.getTrump();
-
-            Optional<Card> smallest = hand.stream()
-                    .filter(c -> c.suit() == suit)
-                    .min(Comparator.comparing(c -> c.rank().getValue()));
-
-            if (smallest.isPresent()) {
-                return smallest.get();
-            }
-        }
-
-        // First try to play lowest trump
-        Optional<Card> lowestTrump = hand.stream()
-                .filter(c -> c.suit() == trump)
-                .min(Comparator.comparing(c -> c.rank().getValue()));
-
-        if (lowestTrump.isPresent()) {
-            return lowestTrump.get();
-        }
-
-        // If no trumps, play lowest non-trump
+        // Lead with the weakest card by the same seniority scale used for beating:
+        // non-trumps rank below our own trump, and within a group by rank value.
         return hand.stream()
-                .min(Comparator.comparing(c -> c.rank().getValue()))
+                .min(Comparator
+                        .comparing((Card c) -> c.suit() == trump) // non-trumps first (false < true)
+                        .thenComparing(c -> c.rank().getValue()))
                 .orElseThrow(() -> new IllegalStateException("No cards to turn"));
     }
 
