@@ -47,9 +47,11 @@ public class DesktopLauncher extends ApplicationAdapter {
     @Override
     public void create() {
         // Minimal skin built in code — no external asset file required.
+        // LibGDX resolves the default font under the name "default-font"; without
+        // it a Label gets a null font and GlyphLayout throws NPE on any glyph.
         BitmapFont font = new BitmapFont();
         Skin skin = new Skin();
-        skin.add("default", font, BitmapFont.class);
+        skin.add("default-font", font, BitmapFont.class);
         skin.add("default", new Label.LabelStyle(font, Color.BLACK), Label.LabelStyle.class);
         skin.add("default", new ScrollPane.ScrollPaneStyle(), ScrollPane.ScrollPaneStyle.class);
 
