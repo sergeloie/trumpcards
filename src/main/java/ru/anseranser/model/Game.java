@@ -34,6 +34,14 @@ public class Game {
     @Setter
     private Random rng = new Random();
 
+    // Verification counters (read by GameSimulator / tests). Harmless in production:
+    // they only tally what playGame already does, and reset at the start of each game.
+    private int roundsPlayed = 0;
+    private int cappedRounds = 0;
+
+    int getRoundsPlayed() { return roundsPlayed; }
+    int getCappedRounds() { return cappedRounds; }
+
     public Game() {
         this(false);
     }
@@ -144,19 +152,6 @@ public class Game {
      */
     private static final int MAX_ROUND_MOVES = 10_000;
 
-    private Player playRound() {
-        setupRound();
-
-        Player current = dealerSeat;
-        int moves = playMoves(current);
-
-        if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
-            // Pathological non-terminating deal — fall back to "most cards loses".
-            return mostCardsRounder();
-        }
-        return determineLoser();
-    }
-
     private void setupRound() {
         bank.clear();
         shuffleAndDeal();
@@ -169,19 +164,6 @@ public class Game {
     }
 
     /**
-     * Runs the trick-exchange loop. Returns the number of moves played.
-     */
-    private int playMoves(Player current) {
-        int moves = 0;
-        while (countActiveGamersWithCards() > 1 && moves < MAX_ROUND_MOVES) {
-            current.makeMove(bank);
-            current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
-            moves++;
-        }
-        return moves;
-    }
-
-    private Player determineLoser() {
         for (Player p : players) {
             if (p.isGamer() && !p.getHand().isEmpty()) {
                 return p;
@@ -201,6 +183,15 @@ public class Game {
             }
         }
         return best;
+    }
+
+    private Player determineLoser() {
+        for (Player p : players) {
+            if (p.isGamer() && !p.getHand().isEmpty()) {
+                return p;
+            }
+        }
+        return null;
     }
 
     private Player nextDealer(Player from) {
@@ -246,23 +237,22 @@ public class Game {
     }
 
     /**
-     * Test seam: run a full game with a specific RNG. With the same seed and
-     * identical player setup, two invocations produce bit-identical games
-     * (the only non-determinism in the engine was the shuffle, now injected).
+     * Test seam: run a full game with a specific RNG, synchronously. Implemented
+     * on top of {@link GameDriver} so the synchronous and stepwise paths share
+     * one rule engine (no duplicated move logic).
      */
     public void playGame(Random rng) {
         this.rng = rng;
-        listener.onEvent(new GameEvent.GameStarted());
-        while (countActiveGamers() > 1) {
-            Player loser = playRound();
-            if (loser == null) break;
-            boolean eliminated = endRound(loser);
-            if (eliminated) {
-                loser.setGamer(false);
+        roundsPlayed = 0;
+        cappedRounds = 0;
+        GameDriver d = createDriver();
+        d.startGame();
+        while (!d.isGameOver()) {
+            while (d.step()) {
+                // synchronous run: no pause between moves
             }
-            dealerSeat = nextDealer(loser);
+            d.finishRound();
         }
-        listener.onEvent(new GameEvent.GameEnded(getWinner()));
     }
 
     public Player getWinner() {
@@ -298,4 +288,104 @@ public class Game {
         }
         return hands;
     }
+
+    // ---------- Stepwise driver ----------
+
+    /** Phases of a game driven step-by-step by {@link GameDriver}. */
+    public enum Phase { INITIAL, ROUND_ACTIVE, ROUND_ENDED, GAME_ENDED }
+
+    /**
+     * Stepwise driver for the game. Unlike {@link #playGame(Random)}, which runs
+     * a whole game synchronously, this advances the game one move at a time so a
+     * presentation layer (desktop / mobile UI) can render each emitted event,
+     * animate, and pause between moves.
+     *
+     * <pre>{@code
+     *   GameDriver d = game.createDriver();
+     *   d.startGame();
+     *   while (!d.isGameOver()) {
+     *       while (d.step()) { /* render / animate between moves *\/ }
+     *       d.finishRound();
+     *   }
+     * }</pre>
+     *
+     * All rule logic (dealing, trick exchange, loser determination, ladder
+     * elimination, dealer advance) is shared with {@code playGame} — there is a
+     * single source of truth for the game flow.
+     */
+    public class GameDriver {
+        private Player current;
+        private int moves;
+        private Phase phase = Phase.INITIAL;
+
+        /** Start the game: emit GameStarted and set up the first round. */
+        public void startGame() {
+            listener.onEvent(new GameEvent.GameStarted());
+            beginRound();
+        }
+
+        private void beginRound() {
+            setupRound();
+            current = dealerSeat;
+            moves = 0;
+            roundsPlayed++;
+            phase = Phase.ROUND_ACTIVE;
+        }
+
+        /**
+         * Advance exactly one move. Returns {@code true} while the round is still
+         * active (caller may render and call again); returns {@code false} once
+         * the round has ended (the caller should then call {@link #finishRound}).
+         */
+        public boolean step() {
+            if (phase != Phase.ROUND_ACTIVE) return false;
+            current.makeMove(bank);
+            current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
+            moves++;
+            if (countActiveGamersWithCards() <= 1 || moves >= MAX_ROUND_MOVES) {
+                phase = Phase.ROUND_ENDED;
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * Resolve the round that {@link #step()} just ended: pick the loser, push
+         * their lowest trump to the scoreboard, eliminate if the ladder
+         * completes, advance the dealer, then either begin the next round or end
+         * the game.
+         */
+        public void finishRound() {
+            if (phase != Phase.ROUND_ENDED) return;
+
+            Player loser;
+            if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
+                cappedRounds++;
+                loser = mostCardsRounder();
+            } else {
+                loser = determineLoser();
+            }
+
+            boolean eliminated = endRound(loser);
+            if (eliminated) {
+                loser.setGamer(false);
+            }
+            dealerSeat = nextDealer(loser);
+
+            if (countActiveGamers() > 1) {
+                beginRound();
+            } else {
+                phase = Phase.GAME_ENDED;
+                listener.onEvent(new GameEvent.GameEnded(getWinner()));
+            }
+        }
+
+        public boolean isGameOver() { return phase == Phase.GAME_ENDED; }
+        public Phase getPhase() { return phase; }
+        public Player getCurrent() { return current; }
+        public List<Card> getBank() { return new ArrayList<>(bank); }
+    }
+
+    /** Create a stepwise driver for this game (see {@link GameDriver}). */
+    public GameDriver createDriver() { return new GameDriver(); }
 }
