@@ -110,9 +110,13 @@ final class GameScreen extends Table {
         // full stack ("8H 7H 6H") is unnecessary clutter.
         scoreboardGroup.clear();
         snap.scoreboard().forEach((suit, stack) -> {
+            // Scoreboard.snapshot() is top-first: index 0 is the most recently
+            // pushed card (the current top of the ladder). The SIX placed by
+            // Scoreboard.init() always sits at the tail, so showing the last
+            // element would always display "6" even after a player loses.
             String label = stack.isEmpty()
                     ? "-"
-                    : localizer.cardName(stack.get(stack.size() - 1), CardLocalizer.Style.LETTERS);
+                    : localizer.cardName(stack.get(0), CardLocalizer.Style.LETTERS);
             scoreboardGroup.addActor(new Label(CardView.ascii(label), skin));
         });
 
