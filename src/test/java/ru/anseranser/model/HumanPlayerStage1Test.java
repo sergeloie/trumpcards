@@ -36,14 +36,11 @@ class HumanPlayerStage1Test {
             }
         };
 
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            if (current instanceof HumanPlayer human) {
+        for (Player p : game.getPlayers()) {
+            if (p instanceof HumanPlayer human) {
                 human.setInput(scripted);
             }
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        }
 
         assertDoesNotThrow(game::playGame);
 
@@ -54,12 +51,9 @@ class HumanPlayerStage1Test {
 
     private int countGamers(Game game) {
         int gamers = 0;
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer()) gamers++;
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            if (p.isGamer()) gamers++;
+        }
         return gamers;
     }
 }

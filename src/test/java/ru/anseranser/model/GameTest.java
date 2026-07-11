@@ -1,7 +1,6 @@
 package ru.anseranser.model;
 
 import org.junit.jupiter.api.Test;
-import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,16 +14,12 @@ class GameTest {
     @Test
     void gameCreation_fourPlayersWithUniqueTrumps() {
         Game game = new Game();
-        CircularDoublyLinkedList<Player> players = game.getPlayers();
-        assertEquals(4, players.size());
+        assertEquals(4, game.getPlayers().size());
 
         List<Card.Suit> trumps = new ArrayList<>();
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            trumps.add(current.getTrump());
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            trumps.add(p.getTrump());
+        }
 
         assertEquals(4, trumps.size());
         assertTrue(trumps.containsAll(List.of(
@@ -37,18 +32,12 @@ class GameTest {
         Game game = new Game();
         // After initScoreboard, each scoreboard stack should have exactly 1 card (SIX)
         // and the deck should have 32 cards (36 - 4 SIXes)
-        CircularDoublyLinkedList<Player> players = game.getPlayers();
-
-        // Verify by dealing and counting
         game.shuffleAndDeal();
 
         int totalCards = 0;
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            totalCards += current.getHand().size();
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            totalCards += p.getHand().size();
+        }
 
         assertEquals(32, totalCards, "32 cards dealt (36 - 4 SIXes in scoreboard)");
     }
@@ -57,16 +46,12 @@ class GameTest {
     void shuffleAndDeal_allCardsDistributed() {
         Game game = new Game();
         game.shuffleAndDeal();
-        CircularDoublyLinkedList<Player> players = game.getPlayers();
 
         int totalCards = 0;
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            assertFalse(current.getHand().isEmpty(), "Each player should have cards");
-            totalCards += current.getHand().size();
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            assertFalse(p.getHand().isEmpty(), "Each player should have cards");
+            totalCards += p.getHand().size();
+        }
 
         assertEquals(32, totalCards);
     }
@@ -78,19 +63,15 @@ class GameTest {
 
         // Record hands before exchange
         Map<Player, List<Card>> handsBefore = new HashMap<>();
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            handsBefore.put(current, new ArrayList<>(current.getHand()));
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            handsBefore.put(p, new ArrayList<>(p.getHand()));
+        }
 
         game.distributeObligatoryCards();
 
         // After exchange: each player should have received SEVEN of their own trump
         // (if someone else had it), and given away SEVEN of other trumps
-        current = start;
-        do {
+        for (Player current : game.getPlayers()) {
             List<Card> hand = current.getHand();
             Card.Suit trump = current.getTrump();
 
@@ -108,9 +89,7 @@ class GameTest {
                 assertFalse(hasOtherSeven,
                         "Player with trump " + trump + " should not have SEVEN of " + otherSuit);
             }
-
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        }
     }
 
     @Test
@@ -127,12 +106,9 @@ class GameTest {
 
     private int countAllCards(Game game) {
         int total = 0;
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            total += current.getHand().size();
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            total += p.getHand().size();
+        }
         return total;
     }
 
@@ -145,12 +121,9 @@ class GameTest {
         assertNotNull(winner, "There should be a winner");
 
         int gamers = 0;
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer()) gamers++;
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            if (p.isGamer()) gamers++;
+        }
 
         assertEquals(1, gamers, "Exactly one player should remain");
     }
@@ -162,12 +135,9 @@ class GameTest {
 
         // Count eliminated players
         int eliminated = 0;
-        Player start = game.getPlayers().getRandom();
-        Player current = start;
-        do {
-            if (!current.isGamer()) eliminated++;
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        for (Player p : game.getPlayers()) {
+            if (!p.isGamer()) eliminated++;
+        }
 
         assertEquals(3, eliminated, "Three players should be eliminated");
 
@@ -175,15 +145,11 @@ class GameTest {
         Player winner = game.getWinner();
         assertNotNull(winner);
 
-        // Check scoreboard: each eliminated player's trump should have ACE on top
-        start = game.getPlayers().getRandom();
-        current = start;
-        do {
-            if (!current.isGamer()) {
-                Card.Suit trump = current.getTrump();
-                System.out.println("Eliminated: " + current + " trump=" + trump);
+        // Check the eliminated players' trumps are no longer gamers
+        for (Player p : game.getPlayers()) {
+            if (!p.isGamer()) {
+                System.out.println("Eliminated: " + p + " trump=" + p.getTrump());
             }
-            current = game.getPlayers().getNext(current);
-        } while (current != start);
+        }
     }
 }

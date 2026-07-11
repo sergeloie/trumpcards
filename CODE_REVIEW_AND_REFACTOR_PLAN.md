@@ -339,3 +339,56 @@ ru.anseranser
 - Этап 3 (`CircularDoublyLinkedList` → `TurnOrder`).
 - Этап 5 (инъекция `Random` / детерминизм) — важно сделать ДО портирования UI.
 - Этап 6 (i18n ResourceBundle) — строки уже локализованы в одном классе, готовы к выносу.
+
+---
+
+## 10. Журнал фактически выполненных изменений (Stage 3 — TurnOrder)
+
+> Дата выполнения: 2026-07-11. Поведение игры НЕ изменилось (8 тестов зелёные).
+
+### Что было заменено
+- Удалён `src/main/java/ru/anseranser/utils/CircularDoublyLinkedList.java` (186 строк
+  кастомного двусвязного списка: O(n) поиск, `getRandom()` на `ThreadLocalRandom`,
+  возврат `null` вместо исключений).
+- Добавлен `src/main/java/ru/anseranser/model/TurnOrder.java` — обёртка над
+  `ArrayList<Player>` с круговой навигацией:
+  * `next(player)` / `previous(player)` — соседи по кругу;
+  * `nextActive(from, predicate)` — следующий активный игрок (заменяет ручные
+    `while (!next.isGamer())` циклы);
+  * реализует `Iterable<Player>` — обход всех игроков одним `for (Player p : players)`.
+
+### Что упростилось (побочный выигрыш)
+- Все ~15 скопированных паттернов `start = getRandom(); do { ... } while (current != start)`
+  заменены детерминированной итерацией `for (Player p : players)` или вызовом
+  `nextActive(...)`. Это убрало СКРЫТЫЙ ИСТОЧНИК НЕДЕТЕРМИНИЗМА (случайный якорь
+  обхода), что упрощает тестирование и детерминированный replay на UI-портах.
+- `Player.chooseLeadCard()` теперь использует `order.previous(current)` и `order.size()`
+  вместо `table.getPrevious` / `table.size()`.
+- `Game` больше не дёргает `getRandom()`; дилер фиксируется детерминированно
+  (`players.get(0)`) — порядок посадки стабилен.
+
+### Изменённые файлы
+- `model/Game.java`: поле `players` типа `TurnOrder`; `setListener` пробрасывает
+  слушателя циклом `for`; `shuffleAndDeal`, `distributeObligatoryCards`,
+  `resetRounders`, `countActive*`, `determineLoser`, `nextDealer`, `getWinner`,
+  `snapshotHands` переписаны без `getRandom()`/do-while; в конструкторе каждому
+  игроку вызывается `p.setOrder(players)`.
+- `model/Player.java`: поле `table` (CDLL) → `order` (`TurnOrder`); `chooseLeadCard`
+  использует `order.previous`/`order.size()`.
+- `App.java` и оба теста: обход игроков через `for (Player p : game.getPlayers())`,
+  убраны `getRandom()`/`getNext()`/`CircularDoublyLinkedList`.
+
+### Чек-лист раздела 2
+- 2.3 (CDLL как скрытая зависимость/сложность): ИСПРАВЛЕНО — удалён, заменён на
+  стандартную коллекцию + явные навигационные хелперы.
+- 2.2 (паттерн `do{…}while(current!=start)` скопирован ~15 раз): ИСПРАВЛЕНО — сведён
+  к итератору `TurnOrder` и `nextActive`.
+
+### Что ещё НЕ сделано (следующие этапы)
+- Этап 2 (дубль `makeMove` Player vs HumanPlayer) — остаётся; устраняется через
+  `MoveStrategy` (ветка «взять банк» и выбор карты выносятся в стратегию).
+- Этап 4 (декомпозиция `Game`: TurnController / Round / Scoreboard / Deck).
+- Этап 5 (инъекция `Random` / детерминизм) — теперь почти бесплатно, т.к. убран
+  случайный якорь; осталось сделать `Collections.shuffle` инъектируемым.
+- Этап 6 (i18n ResourceBundle).
+- Этап 7 (симулятор/тесты на все правила).

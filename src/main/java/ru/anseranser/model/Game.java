@@ -4,7 +4,6 @@ import lombok.Getter;
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
 import ru.anseranser.event.NopListener;
-import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,7 +17,7 @@ import java.util.Optional;
 
 public class Game {
     @Getter
-    private final CircularDoublyLinkedList<Player> players;
+    private final TurnOrder players;
     private final List<Card> deck;
     private final Map<Card.Suit, Deque<Card>> scoreboard;
     private Player dealer;
@@ -33,19 +32,21 @@ public class Game {
 
     public Game(boolean humanPlayer) {
         this.humanPlayer = humanPlayer;
-        players = new CircularDoublyLinkedList<>();
 
         // Create players: human gets SPADES if humanPlayer is true
-        Card.Suit[] suits = Card.Suit.values();
-        for (Card.Suit suit : suits) {
+        List<Player> order = new ArrayList<>();
+        for (Card.Suit suit : Card.Suit.values()) {
             Player player;
             if (humanPlayer && suit == Card.Suit.SPADES) {
                 player = new HumanPlayer();
             } else {
                 player = new Player(suit);
             }
-            player.setTable(players);
-            players.addLast(player);
+            order.add(player);
+        }
+        players = new TurnOrder(order);
+        for (Player p : players) {
+            p.setOrder(players);
         }
 
         deck = new ArrayList<>();
@@ -61,17 +62,14 @@ public class Game {
         }
 
         initScoreboard();
-        dealer = players.getRandom();
+        dealer = players.get(0);
     }
 
     public void setListener(GameListener listener) {
         this.listener = listener;
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            current.setListener(listener);
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            p.setListener(listener);
+        }
     }
 
     // ---------- Setup ----------
@@ -100,16 +98,11 @@ public class Game {
     public void shuffleAndDeal() {
         java.util.Collections.shuffle(deck);
 
-        Player current = players.getNext(dealer);
-        while (!current.isGamer()) {
-            current = players.getNext(current);
-        }
+        Player current = players.nextActive(dealer, Player::isGamer);
 
         for (int i = 0; i < deck.size(); i++) {
             current.getHand().add(deck.get(i));
-            do {
-                current = players.getNext(current);
-            } while (!current.isGamer());
+            current = players.nextActive(current, Player::isGamer);
         }
         deck.clear();
     }
@@ -129,17 +122,13 @@ public class Game {
 
     public void distributeObligatoryCards() {
         Map<Card.Suit, Player> ownerBySuit = new HashMap<>();
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            ownerBySuit.put(current.getTrump(), current);
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            ownerBySuit.put(p.getTrump(), p);
+        }
 
         List<Transfer> transfers = new ArrayList<>();
 
-        current = start;
-        do {
+        for (Player current : players) {
             for (Card card : current.getHand()) {
                 Card.Suit suit = card.suit();
                 if (suit == current.getTrump()) continue;
@@ -151,8 +140,7 @@ public class Game {
                     transfers.add(new Transfer(current, card, ownerBySuit.get(suit)));
                 }
             }
-            current = players.getNext(current);
-        } while (current != start);
+        }
 
         for (Transfer t : transfers) {
             t.from().getHand().remove(t.card());
@@ -163,46 +151,26 @@ public class Game {
     // ---------- Round helpers ----------
 
     private void resetRounders() {
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer() && !current.getHand().isEmpty()) {
-                current.setRounder(true);
-            } else {
-                current.setRounder(false);
-            }
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            boolean active = p.isGamer() && !p.getHand().isEmpty();
+            p.setRounder(active);
+        }
     }
 
     private int countActiveRounders() {
         int count = 0;
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer() && current.isRounder()) count++;
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            if (p.isGamer() && p.isRounder()) count++;
+        }
         return count;
     }
 
     private int countActiveGamers() {
         int count = 0;
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer()) count++;
-            current = players.getNext(current);
-        } while (current != start);
-        return count;
-    }
-
-    private Player nextActivePlayer(Player from) {
-        Player next = players.getNext(from);
-        while (!next.isGamer() || !next.isRounder()) {
-            next = players.getNext(next);
+        for (Player p : players) {
+            if (p.isGamer()) count++;
         }
-        return next;
+        return count;
     }
 
     // ---------- Round ----------
@@ -231,29 +199,21 @@ public class Game {
     private void playMoves(Player current) {
         while (countActiveRounders() > 1) {
             current.makeMove(bank);
-            current = nextActivePlayer(current);
+            current = players.nextActive(current, p -> p.isGamer() && p.isRounder());
         }
     }
 
     private Player determineLoser() {
-        Player start = players.getRandom();
-        Player p = start;
-        do {
+        for (Player p : players) {
             if (p.isGamer() && p.isRounder() && !p.getHand().isEmpty()) {
                 return p;
             }
-            p = players.getNext(p);
-        } while (p != start);
-
+        }
         return null;
     }
 
     private Player nextDealer(Player from) {
-        Player next = players.getNext(from);
-        while (!next.isGamer()) {
-            next = players.getNext(next);
-        }
-        return next;
+        return players.nextActive(from, Player::isGamer);
     }
 
     // ---------- Game ----------
@@ -302,12 +262,9 @@ public class Game {
     }
 
     public Player getWinner() {
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            if (current.isGamer()) return current;
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            if (p.isGamer()) return p;
+        }
         return null;
     }
 
@@ -323,12 +280,9 @@ public class Game {
 
     private Map<Player, List<Card>> snapshotHands() {
         Map<Player, List<Card>> hands = new HashMap<>();
-        Player start = players.getRandom();
-        Player current = start;
-        do {
-            hands.put(current, new ArrayList<>(current.getHand()));
-            current = players.getNext(current);
-        } while (current != start);
+        for (Player p : players) {
+            hands.put(p, new ArrayList<>(p.getHand()));
+        }
         return hands;
     }
 }

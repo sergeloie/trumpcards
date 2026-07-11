@@ -20,14 +20,11 @@ public class App {
 
         if (humanPlayer) {
             InputProvider input = new ConsoleInputProvider();
-            Player start = game.getPlayers().getRandom();
-            Player current = start;
-            do {
-                if (current instanceof HumanPlayer human) {
+            for (Player p : game.getPlayers()) {
+                if (p instanceof HumanPlayer human) {
                     human.setInput(input);
                 }
-                current = game.getPlayers().getNext(current);
-            } while (current != start);
+            }
         }
 
         game.playGame();

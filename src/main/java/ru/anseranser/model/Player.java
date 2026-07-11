@@ -6,7 +6,6 @@ import lombok.Setter;
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
 import ru.anseranser.event.NopListener;
-import ru.anseranser.utils.CircularDoublyLinkedList;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,7 +23,7 @@ public class Player {
     @Setter
     private boolean rounder = true;
     @Setter
-    private CircularDoublyLinkedList<Player> table;
+    private TurnOrder order;
     @Setter
     protected GameListener listener = NopListener.INSTANCE;
 
@@ -54,62 +53,62 @@ public class Player {
     }
 
     public Card chooseLeadCard() {
-            Player current = this;
-            for (int i = 0; i < table.size() - 1; i++) {
-                current = table.getPrevious(current);
-                Card.Suit suit = current.getTrump();
+        Player current = this;
+        for (int i = 0; i < order.size() - 1; i++) {
+            current = order.previous(current);
+            Card.Suit suit = current.getTrump();
 
-                Optional<Card> smallest = hand.stream()
-                        .filter(c -> c.suit() == suit)
-                        .min(Comparator.comparing(c -> c.rank().getValue()));
-
-                if (smallest.isPresent()) {
-                    return smallest.get();
-                }
-            }
-
-            // First try to play lowest trump
-            Optional<Card> lowestTrump = hand.stream()
-                    .filter(c -> c.suit() == trump)
+            Optional<Card> smallest = hand.stream()
+                    .filter(c -> c.suit() == suit)
                     .min(Comparator.comparing(c -> c.rank().getValue()));
 
-            if (lowestTrump.isPresent()) {
-                return lowestTrump.get();
+            if (smallest.isPresent()) {
+                return smallest.get();
             }
-
-            // If no trumps, play lowest non-trump
-            return hand.stream()
-                    .min(Comparator.comparing(c -> c.rank().getValue()))
-                    .orElseThrow(() -> new IllegalStateException("No cards to turn"));
         }
+
+        // First try to play lowest trump
+        Optional<Card> lowestTrump = hand.stream()
+                .filter(c -> c.suit() == trump)
+                .min(Comparator.comparing(c -> c.rank().getValue()));
+
+        if (lowestTrump.isPresent()) {
+            return lowestTrump.get();
+        }
+
+        // If no trumps, play lowest non-trump
+        return hand.stream()
+                .min(Comparator.comparing(c -> c.rank().getValue()))
+                .orElseThrow(() -> new IllegalStateException("No cards to turn"));
+    }
 
     public void makeMove(List<Card> bank) {
-            if (!rounder) return;
+        if (!rounder) return;
 
-            if (bank.isEmpty()) {
-                playLeadCard(bank);
-                if (hand.isEmpty()) rounder = false;
-                return;
-            }
-
-            Card topCard = bank.getLast();
-            Optional<Card> defense = weakestDefense(topCard);
-
-            if (defense.isEmpty()) {
-                takeBank(topCard, bank);
-                return;
-            }
-
-            beatCard(topCard, defense.get(), bank);
-
-            if (hand.isEmpty()) {
-                rounder = false;
-                return;
-            }
-
+        if (bank.isEmpty()) {
             playLeadCard(bank);
             if (hand.isEmpty()) rounder = false;
+            return;
         }
+
+        Card topCard = bank.getLast();
+        Optional<Card> defense = weakestDefense(topCard);
+
+        if (defense.isEmpty()) {
+            takeBank(topCard, bank);
+            return;
+        }
+
+        beatCard(topCard, defense.get(), bank);
+
+        if (hand.isEmpty()) {
+            rounder = false;
+            return;
+        }
+
+        playLeadCard(bank);
+        if (hand.isEmpty()) rounder = false;
+    }
 
     protected void playLeadCard(List<Card> bank) {
         Card leadCard = chooseLeadCard();
