@@ -1,6 +1,7 @@
 package ru.anseranser.model;
 
 import lombok.Getter;
+import lombok.Setter;
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
 import ru.anseranser.event.NopListener;
@@ -14,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 public class Game {
     @Getter
@@ -25,6 +27,8 @@ public class Game {
     private final boolean humanPlayer;
     @Getter
     private GameListener listener = NopListener.INSTANCE;
+    @Setter
+    private Random rng = new Random();
 
     public Game() {
         this(false);
@@ -96,7 +100,12 @@ public class Game {
     // ---------- Dealing ----------
 
     public void shuffleAndDeal() {
-        java.util.Collections.shuffle(deck);
+        shuffleAndDeal(this.rng);
+    }
+
+    /** Test seam: same as {@link #shuffleAndDeal()} but uses the supplied RNG. */
+    void shuffleAndDeal(Random rng) {
+        java.util.Collections.shuffle(deck, rng);
 
         Player current = players.nextActive(dealer, Player::isGamer);
 
@@ -247,6 +256,16 @@ public class Game {
     }
 
     public void playGame() {
+        playGame(this.rng);
+    }
+
+    /**
+     * Test seam: run a full game with a specific RNG. With the same seed and
+     * identical player setup, two invocations produce bit-identical games
+     * (the only non-determinism in the engine was the shuffle, now injected).
+     */
+    public void playGame(Random rng) {
+        this.rng = rng;
         listener.onEvent(new GameEvent.GameStarted());
         while (countActiveGamers() > 1) {
             Player loser = playRound();

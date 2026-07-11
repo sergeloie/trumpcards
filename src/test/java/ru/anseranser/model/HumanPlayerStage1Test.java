@@ -42,7 +42,7 @@ class HumanPlayerStage1Test {
             }
         }
 
-        assertDoesNotThrow(game::playGame);
+        assertDoesNotThrow(() -> game.playGame());
 
         Player winner = game.getWinner();
         assertNotNull(winner, "A winner should emerge from a human-inclusive game");
