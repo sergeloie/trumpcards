@@ -23,13 +23,13 @@ public class Player {
     @Setter
     private CircularDoublyLinkedList<Player> table;
 
-    private boolean canBeat(Card attacking, Card defending) {
+    protected boolean canBeat(Card attacking, Card defending) {
         if (attacking.suit() == defending.suit()) {
             return attacking.rank().getValue() < defending.rank().getValue();
         } else return defending.suit() == trump;
     }
 
-    public Optional<Card> weakestDefense(Card attacking) {
+    protected Optional<Card> weakestDefense(Card attacking) {
         return hand.stream()
                 .filter(c -> canBeat(attacking, c))
                 .min(Comparator
@@ -37,7 +37,7 @@ public class Player {
                         .thenComparing(c -> c.rank().getValue()));
     }
 
-    public void takePot(List<Card> pot) {
+    protected void takePot(List<Card> pot) {
         hand.addAll(pot);
         pot.clear();
     }
@@ -106,19 +106,19 @@ public class Player {
             if (hand.isEmpty()) rounder = false;
         }
 
-    private void playLeadCard(List<Card> bank) {
+    protected void playLeadCard(List<Card> bank) {
         Card leadCard = chooseLeadCard();
         bank.add(leadCard);
         hand.remove(leadCard);
         System.out.println("  " + this + " ходит: " + leadCard);
     }
 
-    private void takeBank(Card topCard, List<Card> bank) {
+    protected void takeBank(Card topCard, List<Card> bank) {
         System.out.println("  " + this + " не может побить " + topCard + " → забирает банк (" + bank.size() + " карт)");
         takePot(bank);
     }
 
-    private void beatCard(Card topCard, Card beatCard, List<Card> bank) {
+    protected void beatCard(Card topCard, Card beatCard, List<Card> bank) {
         bank.add(beatCard);
         hand.remove(beatCard);
         System.out.println("  " + this + " побивает " + topCard + " картой " + beatCard);

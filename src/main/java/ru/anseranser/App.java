@@ -8,7 +8,8 @@ import ru.anseranser.model.Game;
 public class App {
 
     public static void main(String[] args) {
-        Game game = new Game();
+        // Start game with human player (SPADES)
+        Game game = new Game(true);
         game.playGame();
     }
 }

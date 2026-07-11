@@ -20,11 +20,25 @@ public class Game {
     private final Map<Card.Suit, Deque<Card>> scoreboard;
     private Player dealer;
     private final List<Card> bank = new ArrayList<>();
+    private final boolean humanPlayer;
 
     public Game() {
+        this(false);
+    }
+
+    public Game(boolean humanPlayer) {
+        this.humanPlayer = humanPlayer;
         players = new CircularDoublyLinkedList<>();
-        for (Card.Suit suit : Card.Suit.values()) {
-            Player player = new Player(suit);
+
+        // Create players: human gets SPADES if humanPlayer is true
+        Card.Suit[] suits = Card.Suit.values();
+        for (Card.Suit suit : suits) {
+            Player player;
+            if (humanPlayer && suit == Card.Suit.SPADES) {
+                player = new HumanPlayer();
+            } else {
+                player = new Player(suit);
+            }
             player.setTable(players);
             players.addLast(player);
         }
