@@ -1,5 +1,6 @@
 package ru.anseranser.desktop;
 
+import com.badlogic.gdx.Gdx;
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
 import ru.anseranser.i18n.CardLocalizer;
@@ -45,8 +46,21 @@ public final class DesktopGameListener implements GameListener {
     }
 
     private void repaint() {
-        screen.refresh(game);
-        screen.setLog(log());
+        // Capture a consistent snapshot on the engine (game-loop) thread, then
+        // apply it on the LibGDX render thread. scene2d widgets are not thread-safe,
+        // so mutating them from this background thread would race with stage.act()/draw().
+        GameSnapshot snap = GameSnapshot.capture(game, log());
+        if (Gdx.app != null) {
+            Gdx.app.postRunnable(() -> screen.render(snap));
+        } else {
+            screen.render(snap);
+        }
+    }
+
+    /** Repaint from the current game state. Safe to call from the engine thread
+     *  (e.g. when the human's set of valid choices changes and no event fired). */
+    public void requestRepaint() {
+        repaint();
     }
 
     @Override

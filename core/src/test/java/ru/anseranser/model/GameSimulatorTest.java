@@ -77,24 +77,28 @@ class GameSimulatorTest {
     @Test
     void pathologicalSeed_isCaughtByCap_notHidden() {
         // Under the current weakest-lead heuristic, non-terminating deals are
-        // rare but not impossible (e.g. seed 496 still loops without the cap).
-        // With the cap in place such a game still completes, but the simulator
-        // must REPORT that the cap fired — so the suite is honest, not blind.
-        int knownCapped = 496;
-        GameSimulator sim = new GameSimulator(2000, 0, false);
+        // rare but not impossible. With the cap in place such a game still
+        // completes, but the simulator must REPORT that the cap fired — so the
+        // suite is honest, not blind. The exact looping seed depends on the RNG
+        // stream (the random first-dealer selection consumes a draw, shifting the
+        // shuffle), so we scan a wide range for any capped seed instead of
+        // hard-coding one.
+        GameSimulator sim = new GameSimulator(5000, 0, false);
         List<GameSimulator.Result> results = sim.run();
-
-        GameSimulator.Result capped = results.get(knownCapped);
-        assertEquals(knownCapped, capped.seed());
-        assertTrue(capped.cappedRounds() > 0,
-                "Known looping seed " + knownCapped + " must be flagged as capping the cap");
 
         int cappedCount = GameSimulator.countCapped(results);
         assertTrue(cappedCount > 0,
-                "At least seed " + knownCapped + " should be reported as capped across seeds [0..1999]");
+                "At least one seed should be reported as capped across seeds [0..4999]");
         // And the metric must not over-report: only the genuinely-looping deals
         // are flagged, the overwhelming majority terminate naturally.
         assertTrue(cappedCount < results.size(),
                 "Most deals should terminate naturally; capped=" + cappedCount + " of " + results.size());
+
+        GameSimulator.Result capped = results.stream()
+                .filter(r -> r.cappedRounds() > 0)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("expected at least one capped result"));
+        assertTrue(capped.cappedRounds() > 0,
+                "A capped seed must be flagged with cappedRounds > 0 (seed " + capped.seed() + ")");
     }
 }

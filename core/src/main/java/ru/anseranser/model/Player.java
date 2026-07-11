@@ -37,7 +37,7 @@ public class Player {
                         .thenComparing(c -> c.rank().getValue()));
     }
 
-    protected void takePot(List<Card> pot) {
+    protected void collectPot(List<Card> pot) {
         hand.addAll(pot);
         pot.clear();
     }
@@ -58,30 +58,30 @@ public class Player {
                 .orElseThrow(() -> new IllegalStateException("No cards to turn"));
     }
 
-    public void makeMove(List<Card> bank) {
+    public void makeMove(List<Card> pot) {
         if (hand.isEmpty()) return;
 
-        if (bank.isEmpty()) {
-            playLeadCard(bank);
+        if (pot.isEmpty()) {
+            playLeadCard(pot);
             return;
         }
 
-        Card topCard = bank.getLast();
+        Card topCard = pot.getLast();
         Optional<Card> defense = weakestDefense(topCard);
 
         if (defense.isEmpty()) {
-            takeBank(topCard, bank);
+            takePot(topCard, pot);
             return;
         }
 
         Card chosen = chooseDefenseCard(topCard, defense.get());
-        beatCard(topCard, chosen, bank);
+        beatCard(topCard, chosen, pot);
 
         if (hand.isEmpty()) {
             return;
         }
 
-        playLeadCard(bank);
+        playLeadCard(pot);
     }
 
     /**
@@ -89,7 +89,7 @@ public class Player {
      * <p>
      * The base (AI) implementation always plays the weakest legal defense.
      * {@code HumanPlayer} overrides this to let the user pick. The engine
-     * mechanics in {@link #makeMove} (bank/hand mutation, events) are shared and
+     * mechanics in {@link #makeMove} (pot/hand mutation, events) are shared and
      * never duplicated — subclasses only override the decision, not the plumbing.
      *
      * @param attacking the card that must be beaten
@@ -100,20 +100,23 @@ public class Player {
         return weakest;
     }
 
-    protected void playLeadCard(List<Card> bank) {
+    protected void playLeadCard(List<Card> pot) {
         Card leadCard = chooseLeadCard();
-        bank.add(leadCard);
+        pot.add(leadCard);
         hand.remove(leadCard);
         listener.onEvent(new GameEvent.CardPlayed(this, leadCard));
     }
 
-    protected void takeBank(Card topCard, List<Card> bank) {
-        listener.onEvent(new GameEvent.PotTaken(this, topCard, bank.size()));
-        takePot(bank);
+    protected void takePot(Card topCard, List<Card> pot) {
+        int taken = pot.size();
+        collectPot(pot);
+        // Fire AFTER the pot is cleared so listeners observe a consistent state:
+        // the pot is gone and the table is empty (the next move is a lead, not a beat).
+        listener.onEvent(new GameEvent.PotTaken(this, topCard, taken));
     }
 
-    protected void beatCard(Card topCard, Card beatCard, List<Card> bank) {
-        bank.add(beatCard);
+    protected void beatCard(Card topCard, Card beatCard, List<Card> pot) {
+        pot.add(beatCard);
         hand.remove(beatCard);
         listener.onEvent(new GameEvent.CardBeaten(this, topCard, beatCard));
     }

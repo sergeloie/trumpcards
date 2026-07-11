@@ -25,6 +25,16 @@ public final class DesktopInputProvider implements InputProvider {
 
     private volatile CompletableFuture<Card> pending;
     private volatile List<Card> validChoices = List.of();
+    // Invoked (on the game-loop thread) whenever the set of valid choices
+    // changes, so the UI can repaint and highlight the playable cards. The engine
+    // emits no "your turn" event, so without this hook the human never sees the
+    // green highlight on their turn.
+    private volatile Runnable repaintHook = () -> {};
+
+    /** Register a callback the provider invokes when valid choices become known. */
+    public void setRepaintHook(Runnable hook) {
+        this.repaintHook = (hook != null) ? hook : () -> {};
+    }
 
     @Override
     public Card chooseLeadCard(Player player, List<Card> hand) {
@@ -38,6 +48,9 @@ public final class DesktopInputProvider implements InputProvider {
 
     private Card await(List<Card> choices) {
         validChoices = List.copyOf(choices);
+        // The engine emits no "your turn" event, so repaint now so the UI can
+        // highlight the playable cards before we block on the human's click.
+        repaintHook.run();
         CompletableFuture<Card> f = new CompletableFuture<>();
         pending = f;
         try {

@@ -15,7 +15,7 @@ import ru.anseranser.model.Card;
  * style. No image asset is required — the suit letter and colour come from the
  * system font.
  *
- * <p>Used by {@link GameScreen} for hands, the bank and the scoreboard stacks.
+ * <p>Used by {@link GameScreen} for hands, the pot and the scoreboard stacks.
  * When {@code onClick} is provided the card becomes clickable (used for the
  * human's hand to feed {@link DesktopInputProvider}).</p>
  */

@@ -81,12 +81,12 @@ class GameDriverTest {
         Game.GameDriver d = game.createDriver();
         d.startGame();
 
-        // Bank is empty at the start of a round (no lead card played yet).
-        assertTrue(d.getBank().isEmpty(), "Bank empty before first lead");
+        // Pot is empty at the start of a round (no lead card played yet).
+        assertTrue(d.getPot().isEmpty(), "Pot empty before first lead");
         assertNotNull(d.getCurrent(), "Current player must be known");
 
         d.step();
-        // After one step the bank holds exactly one card (the lead).
-        assertEquals(1, d.getBank().size(), "Bank holds the lead card after one step");
+        // After one step the pot holds exactly one card (the lead).
+        assertEquals(1, d.getPot().size(), "Pot holds the lead card after one step");
     }
 }

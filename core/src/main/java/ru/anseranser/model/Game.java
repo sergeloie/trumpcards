@@ -27,7 +27,7 @@ public class Game {
     private final Dealer dealer = new Dealer();
     private final Scoreboard scoreboard = new Scoreboard();
     private Player dealerSeat;
-    private final List<Card> bank = new ArrayList<>();
+    private final List<Card> pot = new ArrayList<>();
     private final boolean humanPlayer;
     @Getter
     private GameListener listener = NopListener.INSTANCE;
@@ -63,6 +63,7 @@ public class Game {
         players = new TurnOrder(order);
 
         scoreboard.init(dealer.deck());
+        // Default seat; the real first dealer is chosen at random in startGame().
         dealerSeat = players.get(0);
     }
 
@@ -153,7 +154,7 @@ public class Game {
     private static final int MAX_ROUND_MOVES = 10_000;
 
     private void setupRound() {
-        bank.clear();
+        pot.clear();
         shuffleAndDeal();
         distributeObligatoryCards();
 
@@ -198,14 +199,19 @@ public class Game {
         return players.nextActive(from, Player::isGamer);
     }
 
+    /** Pick the first dealer at random (house rule for round 1). */
+    private void chooseFirstDealer() {
+        dealerSeat = players.get(rng.nextInt(players.size()));
+    }
+
     // ---------- Game ----------
 
     private boolean endRound(Player loser) {
-        // Collect all cards the loser still holds plus the round's bank.
+        // Collect all cards the loser still holds plus the round's pot.
         List<Card> pile = new ArrayList<>(loser.getHand());
         loser.getHand().clear();
-        pile.addAll(bank);
-        bank.clear();
+        pile.addAll(pot);
+        pot.clear();
 
         Card.Suit trump = loser.getTrump();
         Optional<Card> lowestTrump = pile.stream()
@@ -267,9 +273,9 @@ public class Game {
         return dealerSeat.getTrump();
     }
 
-    /** Live bank (cards in the middle of the current trick). Empty between rounds. */
-    public List<Card> getBank() {
-        return new ArrayList<>(bank);
+    /** Live pot (cards in the middle of the current trick). Empty between rounds. */
+    public List<Card> getPot() {
+        return new ArrayList<>(pot);
     }
 
     /** Scoreboard stacks (trump ladders) for rendering. */
@@ -335,6 +341,7 @@ public class Game {
 
         /** Start the game: emit GameStarted and set up the first round. */
         public void startGame() {
+            chooseFirstDealer();
             listener.onEvent(new GameEvent.GameStarted());
             beginRound();
         }
@@ -354,7 +361,7 @@ public class Game {
          */
         public boolean step() {
             if (phase != Phase.ROUND_ACTIVE) return false;
-            current.makeMove(bank);
+            current.makeMove(pot);
             current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
             moves++;
             if (countActiveGamersWithCards() <= 1 || moves >= MAX_ROUND_MOVES) {
@@ -385,7 +392,10 @@ public class Game {
             if (eliminated) {
                 loser.setGamer(false);
             }
-            dealerSeat = nextDealer(loser);
+            // House rule: the loser of the previous round deals the next one.
+            // If the loser was eliminated (ladder completed) there is no live
+            // dealer, so fall back to the next active gamer.
+            dealerSeat = loser.isGamer() ? loser : nextDealer(loser);
 
             if (countActiveGamers() > 1) {
                 beginRound();
@@ -398,7 +408,7 @@ public class Game {
         public boolean isGameOver() { return phase == Phase.GAME_ENDED; }
         public Phase getPhase() { return phase; }
         public Player getCurrent() { return current; }
-        public List<Card> getBank() { return new ArrayList<>(bank); }
+        public List<Card> getPot() { return new ArrayList<>(pot); }
     }
 
     /** Create a stepwise driver for this game (see {@link GameDriver}). */

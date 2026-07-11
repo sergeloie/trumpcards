@@ -35,6 +35,8 @@ public class DesktopLauncher extends ApplicationAdapter {
     private Game game;
     private DesktopGameListener listener;
     private DesktopInputProvider input;
+    private Thread gameThread;
+    private volatile boolean running = true;
 
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
@@ -60,6 +62,9 @@ public class DesktopLauncher extends ApplicationAdapter {
 
         game = new Game(true); // human player (SPADES) controlled by mouse
         listener = new DesktopGameListener(game, screen);
+        // Repaint when the human's valid choices become known (no engine event
+        // is fired for "your turn"), so playable cards get highlighted.
+        input.setRepaintHook(() -> listener.requestRepaint());
         game.setListener(listener);
         for (Player p : game.getPlayers()) {
             if (p instanceof HumanPlayer human) {
@@ -73,14 +78,15 @@ public class DesktopLauncher extends ApplicationAdapter {
 
         // Run the engine on its own thread so blocking on human input does not
         // stall the render thread that dispatches card clicks.
-        new Thread(this::runGame, "game-loop").start();
+        gameThread = new Thread(this::runGame, "game-loop");
+        gameThread.start();
     }
 
     private void runGame() {
         try {
             GameDriver driver = game.createDriver();
             driver.startGame();
-            while (!driver.isGameOver()) {
+            while (running && !driver.isGameOver()) {
                 Player current = driver.getCurrent();
                 boolean more = driver.step();
                 if (!more) {
@@ -94,6 +100,14 @@ public class DesktopLauncher extends ApplicationAdapter {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } catch (RuntimeException e) {
+            // A rules/engine failure should not silently freeze the UI; surface it
+            // only when it is not just the expected interrupt during shutdown.
+            if (running) {
+                throw e;
+            }
+        } finally {
+            running = false;
         }
     }
 
@@ -107,6 +121,12 @@ public class DesktopLauncher extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        // Stop the engine thread (it is non-daemon and may be blocked waiting for
+        // a human click); otherwise it keeps running against a disposed stage.
+        running = false;
+        if (gameThread != null) {
+            gameThread.interrupt();
+        }
         stage.dispose();
     }
 }

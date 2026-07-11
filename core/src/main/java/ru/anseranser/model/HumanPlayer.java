@@ -34,9 +34,9 @@ public class HumanPlayer extends Player {
     }
 
     @Override
-    protected void playLeadCard(List<Card> bank) {
+    protected void playLeadCard(List<Card> pot) {
         Card leadCard = input.chooseLeadCard(this, getHand());
-        bank.add(leadCard);
+        pot.add(leadCard);
         getHand().remove(leadCard);
         listener.onEvent(new GameEvent.CardPlayed(this, leadCard));
     }
