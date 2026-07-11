@@ -99,7 +99,8 @@ public class Player {
             return;
         }
 
-        beatCard(topCard, defense.get(), bank);
+        Card chosen = chooseDefenseCard(topCard, defense.get());
+        beatCard(topCard, chosen, bank);
 
         if (hand.isEmpty()) {
             rounder = false;
@@ -108,6 +109,22 @@ public class Player {
 
         playLeadCard(bank);
         if (hand.isEmpty()) rounder = false;
+    }
+
+    /**
+     * Decision hook: which card to defend {@code attacking} with.
+     * <p>
+     * The base (AI) implementation always plays the weakest legal defense.
+     * {@code HumanPlayer} overrides this to let the user pick. The engine
+     * mechanics in {@link #makeMove} (bank/hand mutation, events) are shared and
+     * never duplicated — subclasses only override the decision, not the plumbing.
+     *
+     * @param attacking the card that must be beaten
+     * @param weakest   the weakest legal defense (already computed, never null here)
+     * @return the card to defend with (must legally beat {@code attacking})
+     */
+    protected Card chooseDefenseCard(Card attacking, Card weakest) {
+        return weakest;
     }
 
     protected void playLeadCard(List<Card> bank) {
