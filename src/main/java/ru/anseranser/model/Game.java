@@ -53,9 +53,6 @@ public class Game {
             order.add(player);
         }
         players = new TurnOrder(order);
-        for (Player p : players) {
-            p.setOrder(players);
-        }
 
         scoreboard.init(dealer.deck());
         dealerSeat = players.get(0);

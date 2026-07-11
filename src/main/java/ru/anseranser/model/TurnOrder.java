@@ -41,11 +41,6 @@ public class TurnOrder implements Iterable<Player> {
         return players.get(nextIndex(indexOf(player)));
     }
 
-    /** The player sitting to the right of {@code player} (previous to act). */
-    public Player previous(Player player) {
-        return players.get(previousIndex(indexOf(player)));
-    }
-
     private int indexOf(Player player) {
         int idx = players.indexOf(player);
         if (idx < 0) {
@@ -56,10 +51,6 @@ public class TurnOrder implements Iterable<Player> {
 
     private int nextIndex(int i) {
         return (i + 1) % players.size();
-    }
-
-    private int previousIndex(int i) {
-        return (i - 1 + players.size()) % players.size();
     }
 
     /**

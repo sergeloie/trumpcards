@@ -23,8 +23,6 @@ public class Player {
     @Setter
     private boolean rounder = true;
     @Setter
-    private TurnOrder order;
-    @Setter
     protected GameListener listener = NopListener.INSTANCE;
 
     protected boolean canBeat(Card attacking, Card defending) {

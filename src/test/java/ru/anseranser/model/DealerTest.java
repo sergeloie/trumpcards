@@ -42,9 +42,6 @@ class DealerTest {
             order.add(new Player(suit));
         }
         TurnOrder turnOrder = new TurnOrder(order);
-        for (Player p : turnOrder) {
-            p.setOrder(turnOrder);
-        }
 
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
@@ -68,9 +65,6 @@ class DealerTest {
             order.add(new Player(suit));
         }
         TurnOrder turnOrder = new TurnOrder(order);
-        for (Player p : turnOrder) {
-            p.setOrder(turnOrder);
-        }
         // Mark two players as no longer in the game.
         order.get(1).setGamer(false);
         order.get(3).setGamer(false);
