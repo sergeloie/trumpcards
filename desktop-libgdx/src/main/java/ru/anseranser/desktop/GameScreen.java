@@ -35,6 +35,7 @@ final class GameScreen extends Table {
 
     private final Skin skin;
     private final CardLocalizer localizer;
+    private final DesktopInputProvider input;
 
     private final Label statusLabel;
     private final Table bankTable;
@@ -43,10 +44,11 @@ final class GameScreen extends Table {
     private final VerticalGroup opponentsGroup;
     private final VerticalGroup logGroup;
 
-    GameScreen(Skin skin, CardLocalizer localizer) {
+    GameScreen(Skin skin, CardLocalizer localizer, DesktopInputProvider input) {
         super(skin);
         this.skin = skin;
         this.localizer = localizer;
+        this.input = input;
 
         statusLabel = new Label("", skin);
         bankTable = new Table(skin);
@@ -118,12 +120,19 @@ final class GameScreen extends Table {
             bankTable.add(new CardView(c, skin, localizer)).pad(2f);
         }
 
-        // Human hand (bottom, centered)
+        // Human hand (bottom, centered) — cards are clickable while awaiting input.
         humanHandTable.clear();
         Player human = findHuman(game);
         if (human != null) {
+            List<Card> valid = input.validChoices();
+            boolean awaiting = !valid.isEmpty();
             for (Card c : human.getHand()) {
-                humanHandTable.add(new CardView(c, skin, localizer)).pad(2f);
+                CardView view = new CardView(c, skin, localizer,
+                        card -> input.onCardClicked(card));
+                if (awaiting && valid.contains(c)) {
+                    view.getActor().setColor(Color.GREEN);
+                }
+                humanHandTable.add(view).pad(2f);
             }
         }
     }
