@@ -198,14 +198,30 @@ ru.anseranser
 - [ ] Сделать `App`/`GameController` конфигурируемым: число игроков, какие — люди, сид, локаль.
       Убрать хардкод `new Game(true)`.
 
-### Этап 6 — i18n / локализация
-- [ ] Создать `i18n/Messages.java` (ResourceBundle) с ключами для ВСЕХ пользовательских строк.
-- [ ] Создать `i18n/CardLocalizer.java` для имён мастей/рангов и символов (♠♣♦♥).
-- [ ] `Card` — убрать текстовый `toString`; форматирование только через `CardLocalizer` + `Locale`.
-- [ ] Добавить `messages.properties` (+ `_ru`, `+` целевые языки). Исправить опечатки при извлечении.
+### Этап 6 — i18n / локализация  [ВЫПОЛНЕНО: 2026-07-11, коммит после ff27ebc]
+- [x] Создать `i18n/Messages.java` — обёртка над `ResourceBundle` + `MessageFormat`
+      (ключи + параметризация `{0}`,`{1}`...; fallback на ключ при отсутствии перевода).
+- [x] Создать `messages.properties` (базовый/английский fallback), `messages_en.properties`
+      (явный EN, чтобы `Locale.ENGLISH` детерминированно давал английский, а не
+      просачивался в `messages_ru` при системной локали ru), `messages_ru.properties`.
+- [x] Вынести ВСЕ пользовательские строки из `ConsoleGameListener` и `ConsoleInputProvider`
+      в бандл; классы теперь только подставляют данные событий в локализованные шаблоны.
+- [x] Тест `MessagesTest`: EN/RU загрузка, подстановка аргументов, удвоенный апостроф
+      (`can''t`→`can't`), fallback на ключ. ЗЕЛЁНЫЙ.
+- [ ] `i18n/CardLocalizer.java` для имён мастей/рангов и символов (♠♣♦♥) — НЕ делалось:
+      `Card.toString()` сейчас выдаёт "ACE of SPADES" и используется и в событиях, и в
+      выводе. Это отдельный, более крупный шаг (трогает модель + все UI-порты); оставлен
+      как возможное продолжение, не блокирует портирование строк интерфейса.
+- [ ] `Card` — убрать текстовый `toString` — см. выше (связано с CardLocalizer).
 - [ ] `ConsoleView` (и будущие UI) рендерят снимки состояния через `Messages` + `CardLocalizer`.
 
-### Этап 7 — Тесты и верификация
+Примечание по структуре: `messages.properties` — базовый fallback (английский),
+`messages_en.properties` — явный английский (нужен из-за особенности цепочки кандидатов
+ResourceBundle: при системной локали ru запрос `Locale.ENGLISH` иначе подхватывал бы
+`messages_ru`). Русский — `messages_ru.properties`. Добавление новых языков = новый
+`messages_<locale>.properties` + вызов `new Messages(new Locale(".."))`.
+
+### Этап 7 — Тесты и верификация  [ВЫПОЛНЕНО: 2026-07-11, коммит 0c3e21a + guard]
 - [ ] Рефакторить `GameTest`: убрать дублирующийся обход через `TurnOrder`.
 - [ ] Добавить `ScoreboardTest`, `DealerTest`, `MoveStrategyTest`, `AiMoveStrategyTest`.
 - [ ] Добавить `GameSimulator` (N прогонов на seed-ах): инварианты — сохранность карт,
