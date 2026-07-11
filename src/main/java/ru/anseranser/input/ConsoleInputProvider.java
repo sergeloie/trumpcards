@@ -1,5 +1,6 @@
 package ru.anseranser.input;
 
+import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.i18n.Messages;
 import ru.anseranser.model.Card;
 import ru.anseranser.model.Player;
@@ -14,31 +15,38 @@ import java.util.Scanner;
  *
  * Introduced in refactor Stage 1 to move all interactive input out of the
  * model (previously embedded in {@code HumanPlayer}). Refactor Stage 6
- * externalized the prompts into a {@link Messages} ResourceBundle.
+ * externalized the prompts into a {@link Messages} ResourceBundle, and card
+ * names are rendered through {@link CardLocalizer} so they match the listener.
  */
 public class ConsoleInputProvider implements InputProvider {
 
     private final Scanner scanner;
     private final Messages messages;
+    private final CardLocalizer cards;
 
     public ConsoleInputProvider() {
-        this(new Scanner(System.in), new Messages());
+        this(new Scanner(System.in), new Messages(), new CardLocalizer());
     }
 
     public ConsoleInputProvider(Scanner scanner) {
-        this(scanner, new Messages());
+        this(scanner, new Messages(), new CardLocalizer());
     }
 
     public ConsoleInputProvider(Scanner scanner, Messages messages) {
+        this(scanner, messages, new CardLocalizer(messages));
+    }
+
+    public ConsoleInputProvider(Scanner scanner, Messages messages, CardLocalizer cards) {
         this.scanner = scanner;
         this.messages = messages;
+        this.cards = cards;
     }
 
     @Override
     public Card chooseLeadCard(Player player, List<Card> hand) {
         System.out.println(messages.get("prompt.your_cards", player));
         for (int i = 0; i < hand.size(); i++) {
-            System.out.println(messages.get("prompt.card_index", i + 1, hand.get(i)));
+            System.out.println(messages.get("prompt.card_index", i + 1, cards.cardName(hand.get(i))));
         }
         while (true) {
             System.out.print(messages.get("prompt.choose_lead", hand.size()));
@@ -52,9 +60,9 @@ public class ConsoleInputProvider implements InputProvider {
 
     @Override
     public Card chooseDefense(Player player, Card attacking, List<Card> validDefenses) {
-        System.out.println(messages.get("prompt.can_beat", player, attacking));
+        System.out.println(messages.get("prompt.can_beat", player, cards.cardName(attacking)));
         for (int i = 0; i < validDefenses.size(); i++) {
-            System.out.println(messages.get("prompt.card_index", i + 1, validDefenses.get(i)));
+            System.out.println(messages.get("prompt.card_index", i + 1, cards.cardName(validDefenses.get(i))));
         }
         while (true) {
             System.out.print(messages.get("prompt.choose_beat", validDefenses.size()));
