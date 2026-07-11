@@ -139,12 +139,29 @@ public class Game {
 
     // ---------- Round ----------
 
+    /**
+     * Hard safety bound on a single round's move count. A normal round ends in a
+     * few dozen moves; this guards against the pathological case where, under the
+     * "taker stays in the round, drops out only on an empty hand" rule and with no
+     * draw pile, two players can pass the same trumps back and forth forever
+     * (proven by GameSimulator: e.g. seed 0 loops 2M+ moves). When the bound is
+     * hit we end the round and pick the rounder holding the most cards as the
+     * loser — the natural "last player with cards" outcome. This is a defensive
+     * guard, not a rules change: it never fires on a deal that would terminate
+     * normally.
+     */
+    private static final int MAX_ROUND_MOVES = 10_000;
+
     private Player playRound() {
         setupRound();
 
         Player current = dealerSeat;
-        playMoves(current);
+        int moves = playMoves(current);
 
+        if (moves >= MAX_ROUND_MOVES && countActiveRounders() > 1) {
+            // Pathological non-terminating deal — fall back to "most cards loses".
+            return mostCardsRounder();
+        }
         return determineLoser();
     }
 
@@ -160,11 +177,17 @@ public class Game {
                 snapshotHands()));
     }
 
-    private void playMoves(Player current) {
-        while (countActiveRounders() > 1) {
+    /**
+     * Runs the trick-exchange loop. Returns the number of moves played.
+     */
+    private int playMoves(Player current) {
+        int moves = 0;
+        while (countActiveRounders() > 1 && moves < MAX_ROUND_MOVES) {
             current.makeMove(bank);
             current = players.nextActive(current, p -> p.isGamer() && p.isRounder());
+            moves++;
         }
+        return moves;
     }
 
     private Player determineLoser() {
@@ -174,6 +197,19 @@ public class Game {
             }
         }
         return null;
+    }
+
+    /** Fallback loser for a capped (non-terminating) round: most cards in hand. */
+    private Player mostCardsRounder() {
+        Player best = null;
+        for (Player p : players) {
+            if (p.isGamer() && p.isRounder() && !p.getHand().isEmpty()) {
+                if (best == null || p.getHand().size() > best.getHand().size()) {
+                    best = p;
+                }
+            }
+        }
+        return best;
     }
 
     private Player nextDealer(Player from) {

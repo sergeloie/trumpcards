@@ -96,7 +96,6 @@ public class Player {
 
         if (defense.isEmpty()) {
             takeBank(topCard, bank);
-            rounder = false; // took the pot → sits out the rest of this round
             return;
         }
 
