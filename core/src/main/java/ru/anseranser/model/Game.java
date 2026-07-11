@@ -262,6 +262,21 @@ public class Game {
         return null;
     }
 
+    /** Trump suit of the current deal (the dealer's own suit). */
+    public Card.Suit getTrump() {
+        return dealerSeat.getTrump();
+    }
+
+    /** Live bank (cards in the middle of the current trick). Empty between rounds. */
+    public List<Card> getBank() {
+        return new ArrayList<>(bank);
+    }
+
+    /** Scoreboard stacks (trump ladders) for rendering. */
+    public Scoreboard getScoreboard() {
+        return scoreboard;
+    }
+
     /** All cards still in play: every hand, every scoreboard stack, and the dealer's deck pool. */
     public List<Card> allCards() {
         List<Card> all = new ArrayList<>();

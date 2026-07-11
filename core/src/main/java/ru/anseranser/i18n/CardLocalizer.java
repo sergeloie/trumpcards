@@ -31,8 +31,10 @@ public class CardLocalizer {
     public enum Style {
         /** Word form: "ace of spades" / "туз пик". */
         FULL,
-        /** Compact glyph form: "A\u2660" / "7\u2665". */
-        SHORT
+        /** Compact glyph form: "A♠" / "7♥" (Unicode suit symbol — needs a font with glyphs). */
+        SHORT,
+        /** Compact ASCII-safe form: "AS" / "7H" / "TD" (rank + suit letter). Portable to any font. */
+        LETTERS
     }
 
     private final Messages messages;
@@ -41,6 +43,11 @@ public class CardLocalizer {
     /** Full English words, default JVM locale, FULL style. */
     public CardLocalizer() {
         this(new Messages(), Style.FULL);
+    }
+
+    /** Given style with the default JVM locale. */
+    public CardLocalizer(Style style) {
+        this(new Messages(), style);
     }
 
     public CardLocalizer(Messages messages) {
@@ -89,6 +96,19 @@ public class CardLocalizer {
         if (override == Style.SHORT) {
             return rankShort(card.rank()) + suitSymbol(card.suit());
         }
+        if (override == Style.LETTERS) {
+            return rankShort(card.rank()) + suitLetter(card.suit());
+        }
         return messages.get("card.format.full", rankName(card.rank()), suitName(card.suit()));
+    }
+
+    /** One-letter suit code (S/H/D/C), language-independent. For the LETTERS style. */
+    public String suitLetter(Card.Suit suit) {
+        return switch (suit) {
+            case SPADES -> "S";
+            case HEARTS -> "H";
+            case DIAMONDS -> "D";
+            case CLUBS -> "C";
+        };
     }
 }
