@@ -27,6 +27,7 @@ public final class DesktopGameListener implements GameListener {
     private final List<String> log = new ArrayList<>();
     private final GameScreen screen;
     private final Game game;
+    private final CardLocalizer cardLocalizer = new CardLocalizer(CardLocalizer.Style.LETTERS);
 
     public DesktopGameListener(Game game, GameScreen screen) {
         this.game = game;
@@ -105,7 +106,7 @@ public final class DesktopGameListener implements GameListener {
 
     /** ASCII-safe short card label, e.g. "AS", "7H". */
     private String card(Card c) {
-        return new CardLocalizer(CardLocalizer.Style.LETTERS).cardName(c);
+        return cardLocalizer.cardName(c);
     }
 
     /** Exposed for callers that want a fresh log line after a manual action. */
