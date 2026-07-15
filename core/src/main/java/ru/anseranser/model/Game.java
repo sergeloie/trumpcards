@@ -25,6 +25,11 @@ public class Game {
     @Getter
     private final TurnOrder players;
     private final Dealer dealer = new Dealer();
+    /**
+     * -- GETTER --
+     * Scoreboard stacks (trump ladders) for rendering.
+     */
+    @Getter
     private final Scoreboard scoreboard = new Scoreboard();
     private Player dealerSeat;
     private final List<Card> pot = new ArrayList<>();
@@ -278,11 +283,6 @@ public class Game {
         return new ArrayList<>(pot);
     }
 
-    /** Scoreboard stacks (trump ladders) for rendering. */
-    public Scoreboard getScoreboard() {
-        return scoreboard;
-    }
-
     /** All cards still in play: every hand, every scoreboard stack, and the dealer's deck pool. */
     public List<Card> allCards() {
         List<Card> all = new ArrayList<>();
@@ -335,8 +335,10 @@ public class Game {
      * single source of truth for the game flow.
      */
     public class GameDriver {
+        @Getter
         private Player current;
         private int moves;
+        @Getter
         private Phase phase = Phase.INITIAL;
 
         /** Start the game: emit GameStarted and set up the first round. */
@@ -406,8 +408,7 @@ public class Game {
         }
 
         public boolean isGameOver() { return phase == Phase.GAME_ENDED; }
-        public Phase getPhase() { return phase; }
-        public Player getCurrent() { return current; }
+
         public List<Card> getPot() { return new ArrayList<>(pot); }
     }
 

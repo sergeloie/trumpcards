@@ -43,8 +43,8 @@ public class Dealer {
      */
     public void deal(TurnOrder order, Player dealer, java.util.function.Predicate<Player> active) {
         Player current = order.nextActive(dealer, active);
-        for (int i = 0; i < deck.size(); i++) {
-            current.getHand().add(deck.get(i));
+        for (Card card : deck) {
+            current.getHand().add(card);
             current = order.nextActive(current, active);
         }
         deck.clear();
