@@ -18,6 +18,9 @@ import java.util.List;
  *
  * <p>The engine is the single source of truth; this class only translates events
  * into view updates and never touches game rules.</p>
+ *
+ * <p>Players are identified in events by their trump suit ({@link Card.Suit});
+ * this listener renders that suit via {@link CardLocalizer}.</p>
  */
 public final class DesktopGameListener implements GameListener {
 
@@ -69,6 +72,9 @@ public final class DesktopGameListener implements GameListener {
         if (event instanceof GameEvent.GameStarted s) {
             record("Game started.");
             repaint();
+        } else if (event instanceof GameEvent.AwaitingHumanInput e) {
+            record(seat(e.player()) + " — your turn");
+            repaint();
         } else if (event instanceof GameEvent.RoundStarted s) {
             StringBuilder sb = new StringBuilder("Round started. Hands: ");
             for (Player p : game.getPlayers()) {
@@ -100,8 +106,8 @@ public final class DesktopGameListener implements GameListener {
     }
 
     /** ASCII-safe seat name (the player's trump suit), e.g. "SPADES". */
-    private String seat(Player p) {
-        return p.getTrump().name();
+    private String seat(Card.Suit suit) {
+        return suit.name();
     }
 
     /** ASCII-safe short card label, e.g. "AS", "7H". */

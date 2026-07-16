@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,7 +25,7 @@ class GameSimulatorTest {
 
     @Test
     void invariants_holdAcrossManySeeds() {
-        GameSimulator sim = new GameSimulator(200, 1, false);
+        GameSimulator sim = new GameSimulator(200, 1, null);
         List<GameSimulator.Result> results = sim.run();
 
         assertEquals(200, results.size());
@@ -52,10 +51,10 @@ class GameSimulatorTest {
     @Test
     void determinism_sameSeed_sameWinner() {
         for (int seed = 0; seed < 50; seed++) {
-            Game g1 = new Game(false);
-            Game g2 = new Game(false);
-            g1.playGame(new Random(seed));
-            g2.playGame(new Random(seed));
+            Game g1 = new Game();
+            Game g2 = new Game();
+            g1.playGame(new SplitMix64(seed));
+            g2.playGame(new SplitMix64(seed));
             assertEquals(g1.getWinner().getTrump(), g2.getWinner().getTrump(),
                     "Seed " + seed + ": identical seeds must yield the same winner");
         }
@@ -65,7 +64,7 @@ class GameSimulatorTest {
     void winners_areDistributedAcrossSuits() {
         // Not a hard invariant, but a sanity check that the RNG-driven dealing
         // doesn't collapse every game to one suit (which would hint at a bug).
-        GameSimulator sim = new GameSimulator(500, 100, false);
+        GameSimulator sim = new GameSimulator(500, 100, null);
         Map<Card.Suit, Long> bySuit = sim.run().stream()
                 .collect(Collectors.groupingBy(
                         GameSimulator.Result::winnerTrump, Collectors.counting()));
@@ -83,7 +82,7 @@ class GameSimulatorTest {
         // stream (the random first-dealer selection consumes a draw, shifting the
         // shuffle), so we scan a wide range for any capped seed instead of
         // hard-coding one.
-        GameSimulator sim = new GameSimulator(5000, 0, false);
+        GameSimulator sim = new GameSimulator(50000, 0, null);
         List<GameSimulator.Result> results = sim.run();
 
         int cappedCount = GameSimulator.countCapped(results);

@@ -1,11 +1,11 @@
 package ru.anseranser.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 /**
- * Builds the 36-card deck, shuffles it with an injected {@link Random}, and deals
+ * Builds the 36-card deck, shuffles it with an injected {@link Rng}, and deals
  * it round-robin to the active (still-in-game) players.
  *
  * <p>Extracted from {@code Game} in refactor Stage 4 so shuffling/dealing is
@@ -27,9 +27,12 @@ public class Dealer {
         return deck;
     }
 
-    /** Shuffle the deck in place using the supplied RNG. */
-    public void shuffle(Random rng) {
-        java.util.Collections.shuffle(deck, rng);
+    /** Shuffle the deck in place using the supplied RNG (Fisher-Yates). */
+    public void shuffle(Rng rng) {
+        for (int i = deck.size() - 1; i > 0; i--) {
+            int j = rng.nextInt(i + 1);
+            Collections.swap(deck, i, j);
+        }
     }
 
     /**
@@ -44,7 +47,7 @@ public class Dealer {
     public void deal(TurnOrder order, Player dealer, java.util.function.Predicate<Player> active) {
         Player current = order.nextActive(dealer, active);
         for (Card card : deck) {
-            current.getHand().add(card);
+            current.addCard(card);
             current = order.nextActive(current, active);
         }
         deck.clear();

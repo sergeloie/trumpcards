@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,8 +26,8 @@ class DealerTest {
     void sameSeed_producesSameShuffleOrder() {
         Dealer d1 = new Dealer();
         Dealer d2 = new Dealer();
-        d1.shuffle(new Random(123));
-        d2.shuffle(new Random(123));
+        d1.shuffle(new SplitMix64(123));
+        d2.shuffle(new SplitMix64(123));
 
         assertEquals(d1.deck(), d2.deck(),
                 "Identical seeds must yield identical shuffle order");
@@ -47,7 +46,7 @@ class DealerTest {
         Scoreboard sb = new Scoreboard();
         sb.init(dealer.deck()); // removes 4 SIXes → 32 cards left
 
-        dealer.shuffle(new Random(7));
+        dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
 
         int total = 0;
@@ -73,7 +72,7 @@ class DealerTest {
         Scoreboard sb = new Scoreboard();
         sb.init(dealer.deck());
 
-        dealer.shuffle(new Random(7));
+        dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
 
         // Inactive players receive nothing; active ones split the 32 cards.

@@ -1,50 +1,37 @@
 package ru.anseranser.desktop;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.model.Card;
 
 /**
- * A single card rendered as a rounded rectangle with a short localized label
- * (e.g. "AS", "7H") produced by {@link CardLocalizer} in the {@code LETTERS}
- * style. No image asset is required — the suit letter and colour come from the
- * system font.
+ * A single card rendered as a graphical asset (a {@link TextureRegion} from
+ * {@link CardAssets}) instead of a text label. Used by {@link GameScreen} for
+ * the human hand, the pot, the scoreboard stacks and the opponent card-backs.
  *
- * <p>Used by {@link GameScreen} for hands, the pot and the scoreboard stacks.
- * When {@code onClick} is provided the card becomes clickable (used for the
- * human's hand to feed {@link DesktopInputProvider}).</p>
+ * <p>When {@code onClick} is provided the card becomes clickable (used for the
+ * human's hand to feed {@link DesktopInputProvider}). A green tint marks a card
+ * that is currently a valid choice.</p>
  */
-final class CardView extends Container<Label> {
+final class CardView extends Container<Image> {
 
-    private static final float CARD_W = 52f;
-    private static final float CARD_H = 72f;
+    static final float CARD_W = 96f;
+    static final float CARD_H = 132f;
 
     interface ClickHandler {
         void accept(Card card);
     }
 
-    CardView(Card card, Skin skin, CardLocalizer localizer) {
-        this(card, skin, localizer, null);
-    }
-
-    CardView(Card card, Skin skin, CardLocalizer localizer, ClickHandler onClick) {
-        // The default BitmapFont only ships ASCII glyphs; keep text ASCII-safe so
-        // a missing glyph can never throw (GlyphLayout NPE). Suit letters / ranks
-        // are already ASCII via CardLocalizer.LETTERS.
-        Label label = new Label(ascii(localizer.cardName(card, CardLocalizer.Style.LETTERS)), skin);
-        label.setColor(suitColor(card.suit()));
-        setActor(label);
+    CardView(TextureRegion region, Card card, ClickHandler onClick) {
+        Image image = new Image(region);
+        setActor(image);
         setSize(CARD_W, CARD_H);
-        pad(4f);
-        if (skin.has("card", com.badlogic.gdx.scenes.scene2d.utils.Drawable.class)) {
-            setBackground(skin.getDrawable("card"));
-        }
-        if (onClick != null) {
+        image.setFillParent(true);
+        if (onClick != null && card != null) {
             addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
@@ -54,24 +41,34 @@ final class CardView extends Container<Label> {
         }
     }
 
-    private static Color suitColor(Card.Suit suit) {
-        return switch (suit) {
-            case HEARTS, DIAMONDS -> Color.RED;
-            case SPADES, CLUBS -> Color.BLACK;
-        };
+    /** A face-up card (clickable when {@code onClick} is non-null). */
+    static CardView face(Card card, CardAssets assets, ClickHandler onClick) {
+        return new CardView(assets.face(card), card, onClick);
     }
 
-    float cardWidth() { return CARD_W; }
-    float cardHeight() { return CARD_H; }
+    /** A face-down card back for the given seat. */
+    static CardView back(Card.Suit seat, CardAssets assets) {
+        return new CardView(assets.back(seat), null, null);
+    }
 
-    /** Keep text within the default BitmapFont's ASCII glyph range (others -> '?'). */
-    static String ascii(String s) {
-        if (s == null) return "";
-        StringBuilder b = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            b.append(c <= 127 ? c : '?');
-        }
-        return b.toString();
+    /** An empty placeholder slot. */
+    static CardView empty(CardAssets assets) {
+        return new CardView(assets.empty(), null, null);
+    }
+
+    /** Tint the card green to mark it as a currently valid choice. */
+    void markPlayable() {
+        getActor().setColor(Color.GREEN);
+    }
+
+    void clearMark() {
+        getActor().setColor(Color.WHITE);
+    }
+
+    /** Rotate the whole card widget by the given degrees (e.g. 90 for side seats). */
+    void setCardRotation(float degrees) {
+        setRotation(degrees);
+        // Keep the widget's footprint square so layout math stays simple.
+        setSize(CARD_H, CARD_W);
     }
 }

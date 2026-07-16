@@ -3,7 +3,6 @@ package ru.anseranser.model;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,12 +24,12 @@ class GameDriverTest {
     @Test
     void driver_matchesSynchronousPlayGame() {
         for (int seed = 0; seed < 50; seed++) {
-            Game sync = new Game(false);
-            sync.playGame(new Random(seed));
+            Game sync = new Game();
+            sync.playGame(new SplitMix64(seed));
             Card.Suit syncWinner = sync.getWinner().getTrump();
 
-            Game stepwise = new Game(false);
-            stepwise.setRng(new Random(seed));
+            Game stepwise = new Game();
+            stepwise.setRng(new SplitMix64(seed));
             Game.GameDriver d = stepwise.createDriver();
             d.startGame();
             while (!d.isGameOver()) {
@@ -48,7 +47,7 @@ class GameDriverTest {
 
     @Test
     void driver_emitsOneEventPerStep() {
-        Game game = new Game(false);
+        Game game = new Game();
         final int[] events = {0};
         game.setListener(event -> events[0]++);
 
@@ -77,7 +76,7 @@ class GameDriverTest {
 
     @Test
     void driver_stateReadableBetweenSteps() {
-        Game game = new Game(false);
+        Game game = new Game();
         Game.GameDriver d = game.createDriver();
         d.startGame();
 

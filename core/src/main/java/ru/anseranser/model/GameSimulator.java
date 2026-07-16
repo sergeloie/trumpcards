@@ -3,7 +3,6 @@ package ru.anseranser.model;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 /**
@@ -32,12 +31,17 @@ public class GameSimulator {
 
     private final int games;
     private final int startSeed;
-    private final boolean humanPlayer;
+    private final DecisionStrategy humanStrategy;
 
-    public GameSimulator(int games, int startSeed, boolean humanPlayer) {
+    /**
+     * @param humanStrategy strategy for the SPADES seat (pass {@code null} for a
+     *                      fully automated game). Injected rather than a boolean
+     *                      flag so the domain stays free of any input dependency (R6/R8).
+     */
+    public GameSimulator(int games, int startSeed, DecisionStrategy humanStrategy) {
         this.games = games;
         this.startSeed = startSeed;
-        this.humanPlayer = humanPlayer;
+        this.humanStrategy = humanStrategy;
     }
 
     public record Result(
@@ -74,8 +78,14 @@ public class GameSimulator {
     }
 
     private Result runOne(int seed) {
-        Game game = new Game(humanPlayer);
-        game.playGame(new Random(seed));
+        List<Player> players = new ArrayList<>();
+        for (Card.Suit suit : Card.Suit.values()) {
+            DecisionStrategy s = (humanStrategy != null && suit == Card.Suit.SPADES)
+                    ? humanStrategy : new AiDecisionStrategy();
+            players.add(new Player(suit, s));
+        }
+        Game game = new Game(players);
+        game.playGame(new SplitMix64(seed));
 
         List<Card> allCards = game.allCards();
         int totalCards = allCards.size();

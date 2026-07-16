@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -131,11 +130,11 @@ class GameTest {
 
     @Test
     void determinism_sameSeed_sameGame() {
-        Game g1 = new Game(false);
-        Game g2 = new Game(false);
+        Game g1 = new Game();
+        Game g2 = new Game();
 
-        Random r1 = new Random(42);
-        Random r2 = new Random(42);
+        SplitMix64 r1 = new SplitMix64(42);
+        SplitMix64 r2 = new SplitMix64(42);
 
         // Drive both games with identical RNG; everything downstream
         // (dealing, AI heuristics, round order) is deterministic, so the
@@ -159,15 +158,15 @@ class GameTest {
 
     @Test
     void determinism_differentSeed_canDiffer() {
-        Game g1 = new Game(false);
-        Game g2 = new Game(false);
+        Game g1 = new Game();
+        Game g2 = new Game();
 
         // Two games with different seeds are not required to match; the point
         // of this test is that seeding is honoured (no hidden non-determinism
         // such as ThreadLocalRandom leaking back in).
         assertDoesNotThrow(() -> {
-            g1.playGame(new Random(1));
-            g2.playGame(new Random(2));
+            g1.playGame(new SplitMix64(1));
+            g2.playGame(new SplitMix64(2));
         });
     }
 }

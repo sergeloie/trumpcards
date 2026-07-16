@@ -2,7 +2,6 @@ package ru.anseranser.desktop;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup;
@@ -13,129 +12,150 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Renders the game state with the layout requested for the desktop port:
+ * Renders the game state with a fixed 1920x1080 table layout:
  *
  * <pre>
- *  +----------------+-----------------------------+
- *  | scoreboard     |  (opponents hands, top)     |
- *  | (top-left)     |                             |
- *  |                +-----------------------------+
- *  |                |  POT (center of screen)     |
- *  +----------------+-----------------------------+
- *  | move-log (right, full height)  | human hand  |
- *  |                                | (bottom, centered) |
- *  +--------------------------------+-------------+
+ *  +--------------------------------------------------+
+ *  |  scoreboard (top-left)   opponent TOP (top)      |
+ *  |                                                |
+ *  |  opponent LEFT (left)    POT (center)   opponent RIGHT (right) |
+ *  |                                                |
+ *  |              YOUR HAND (bottom, centered)         |
+ *  +--------------------------------------------------+
  * </pre>
  *
- * The screen is stateless w.r.t. the engine: {@link #render(GameSnapshot)}
+ * The human (SPADES) sits at the bottom. Opponents are drawn as a single
+ * face-down card back (rubashka) with the number of cards in their hand and
+ * their trump suit, placed LEFT / TOP / RIGHT according to turn order. The pot
+ * sits in the middle. All cards and backs are shown vertically; the left and
+ * right opponents' cards are rotated 90° so their long edge faces the centre.
+ *
+ * <p>The screen is stateless w.r.t. the engine: {@link #render(GameSnapshot)}
  * rebuilds the widgets from an immutable {@link GameSnapshot} (captured on the
  * engine thread) every time an event fires. All widget mutation happens on the
- * LibGDX render thread.
+ * LibGDX render thread.</p>
  */
 final class GameScreen extends Table {
 
     private final Skin skin;
     private final CardLocalizer localizer;
     private final DesktopInputProvider input;
+    private final CardAssets assets;
 
     private final Label statusLabel;
     private final Table potTable;
     private final Table humanHandTable;
     private final VerticalGroup scoreboardGroup;
-    private final VerticalGroup opponentsGroup;
-    private final Table logTable;
-    private ScrollPane logPane;
+    private final Table leftOpponent;
+    private final Table topOpponent;
+    private final Table rightOpponent;
+    private final Table humanPanel;
 
-    private static final float LOG_PANE_WIDTH = 280f;
-    private static final float LOG_LINE_WIDTH = 264f;
-
-    GameScreen(Skin skin, CardLocalizer localizer, DesktopInputProvider input) {
+    GameScreen(Skin skin, CardLocalizer localizer, DesktopInputProvider input, CardAssets assets) {
         super(skin);
         this.skin = skin;
         this.localizer = localizer;
         this.input = input;
+        this.assets = assets;
 
         statusLabel = new Label("", skin);
         potTable = new Table(skin);
         humanHandTable = new Table(skin);
         scoreboardGroup = new VerticalGroup();
-        opponentsGroup = new VerticalGroup();
-        logTable = new Table(skin);
-        logTable.left().top();
+        leftOpponent = new Table(skin);
+        topOpponent = new Table(skin);
+        rightOpponent = new Table(skin);
+        humanPanel = new Table(skin);
 
         buildLayout();
     }
 
     private void buildLayout() {
+        setSize(1920f, 1080f);
         setFillParent(true);
-        pad(8f);
+        pad(16f);
 
-        // Top row: scoreboard (left) + opponents (right)
-        Table topRow = new Table(skin);
-        topRow.left().top();
-        topRow.add(scoreboardGroup).left().top().padRight(24f);
-        topRow.add(opponentsGroup).expandX().left().top();
+        // Scoreboard (top-left)
+        Table scoreboardPanel = new Table(skin);
+        scoreboardPanel.add(new Label("SCOREBOARD", skin)).left().row();
+        scoreboardPanel.add(scoreboardGroup).left().top();
 
         // Center: pot
-        Table centerRow = new Table(skin);
-        centerRow.add(new Label("POT", skin)).row();
-        centerRow.add(potTable);
+        Table centerPanel = new Table(skin);
+        centerPanel.add(new Label("POT", skin)).row();
+        centerPanel.add(potTable);
 
-        // Bottom: human hand (left/center) + log (right)
-        logPane = new ScrollPane(logTable, skin);
-        logPane.setFadeScrollBars(false);
-        logPane.setScrollingDisabled(true, false);
+        // Human hand (bottom)
+        humanPanel.add(new Label("YOUR HAND", skin)).center().row();
+        humanPanel.add(humanHandTable).expandX().center();
 
-        Table bottomRow = new Table(skin);
-        bottomRow.add(new Label("YOUR HAND", skin)).colspan(2).center().row();
-        bottomRow.add(humanHandTable).expandX().center();
-        bottomRow.add(logPane).width(LOG_PANE_WIDTH).top().right();
+        // Row 1: scoreboard (left) | top opponent (center)
+        add(scoreboardPanel).top().left();
+        add(topOpponent).top().expandX().center().row();
 
-        add(statusLabel).colspan(2).left().row();
-        add(topRow).colspan(2).expandX().fillX().top().row();
-        add(centerRow).colspan(2).expand().top().row();
-        add(bottomRow).colspan(2).expandX().fillX().bottom();
+        // Row 2: left opponent | pot (center) | right opponent
+        add(leftOpponent).top().left();
+        add(centerPanel).expand().center();
+        add(rightOpponent).top().right().row();
+
+        // Row 3: human hand (bottom, centered)
+        add(new Table(skin)).left();
+        add(humanPanel).bottom().expandX().center();
+        add(new Table(skin)).right().row();
+
+        // Status line pinned to the very bottom-left
+        add(statusLabel).colspan(3).left().bottom();
     }
 
     /**
      * Rebuild all widgets from an immutable {@link GameSnapshot} captured on the
-     * engine thread. Must be invoked from the LibGDX render thread only (the
-     * listener posts it via {@code Gdx.app.postRunnable}).
+     * engine thread. Must be invoked from the LibGDX render thread only.
      */
     void render(GameSnapshot snap) {
-        statusLabel.setText(CardView.ascii(snap.status()));
+        statusLabel.setText(snap.status());
 
-        // Scoreboard (left, top): show only the most recent card placed on each
-        // suit's ladder. The card name already encodes the suit (e.g. "8H"), so a
-        // full stack ("8H 7H 6H") is unnecessary clutter.
+        // Scoreboard (top-left): most recent card on each suit's ladder.
         scoreboardGroup.clear();
         snap.scoreboard().forEach((suit, stack) -> {
-            // Scoreboard.snapshot() is top-first: index 0 is the most recently
-            // pushed card (the current top of the ladder). The SIX placed by
-            // Scoreboard.init() always sits at the tail, so showing the last
-            // element would always display "6" even after a player loses.
             String label = stack.isEmpty()
                     ? "-"
                     : localizer.cardName(stack.get(0), CardLocalizer.Style.LETTERS);
-            scoreboardGroup.addActor(new Label(CardView.ascii(label), skin));
+            scoreboardGroup.addActor(new Label(label, skin));
         });
 
-        // Opponents (top-right): every gamer except the human seat (SPADES)
-        opponentsGroup.clear();
+        // Opponents: one face-down card back (rotated for side seats) + card count
+        // + trump suit, placed by seat.
+        leftOpponent.clear();
+        topOpponent.clear();
+        rightOpponent.clear();
         for (GameSnapshot.OpponentView o : snap.opponents()) {
-            Label l = new Label(CardView.ascii(o.trump() + "  (" + o.cardCount() + " cards)"), skin);
-            opponentsGroup.addActor(l);
+            Table panel = switch (o.seat()) {
+                case LEFT -> leftOpponent;
+                case TOP -> topOpponent;
+                case RIGHT -> rightOpponent;
+            };
+            CardView back = CardView.back(o.trump(), assets);
+            if (o.seat() == GameSnapshot.Seat.LEFT) {
+                back.setCardRotation(90f);
+            } else if (o.seat() == GameSnapshot.Seat.RIGHT) {
+                back.setCardRotation(-90f);
+            }
+            panel.add(back).pad(4f).row();
+            panel.add(new Label(o.cardCount() + " cards", skin)).center().row();
+            panel.add(new Label("Trump: " + o.trump().name(), skin)).center();
         }
 
         // Pot (center)
         potTable.clear();
-        for (Card c : snap.pot()) {
-            potTable.add(new CardView(c, skin, localizer)).pad(2f);
+        if (snap.pot().isEmpty()) {
+            potTable.add(CardView.empty(assets)).pad(2f);
+        } else {
+            for (Card c : snap.pot()) {
+                potTable.add(CardView.face(c, assets, null)).pad(2f);
+            }
         }
 
-        // Human hand (bottom) — laid out as 4 rows, one per suit, in Card.Suit
-        // order (SPADES on top, then CLUBS, DIAMONDS, HEARTS). Within a suit the
-        // cards are sorted by ascending rank. Cards are clickable while awaiting input.
+        // Human hand (bottom) — 4 rows, one per suit, ascending rank.
         humanHandTable.clear();
         List<Card> valid = input.validChoices();
         boolean awaiting = !valid.isEmpty();
@@ -145,27 +165,23 @@ final class GameScreen extends Table {
                     .sorted(Comparator.comparingInt(c -> c.rank().getValue()))
                     .toList();
             Table suitRow = new Table(skin);
+            if (group.isEmpty()) {
+                suitRow.add(CardView.empty(assets)).pad(2f);
+            }
             for (Card c : group) {
-                CardView view = new CardView(c, skin, localizer,
+                CardView view = CardView.face(c, assets,
                         card -> input.onCardClicked(card));
                 if (awaiting && valid.contains(c)) {
-                    view.getActor().setColor(Color.GREEN);
+                    view.markPlayable();
                 }
                 suitRow.add(view).pad(2f);
             }
             humanHandTable.add(suitRow).center().row();
         }
 
-        // Move log (right panel) — each entry on its own horizontal line, wrapped
-        // to a fixed width so text flows left-to-right (not one letter per line).
-        logTable.clear();
-        for (String line : snap.logLines()) {
-            Label l = new Label(CardView.ascii(line), skin);
-            l.setWrap(true);
-            logTable.add(l).width(LOG_LINE_WIDTH).left().row();
-        }
-        // Auto-scroll to the newest entry at the bottom.
-        logPane.validate();
-        logPane.setScrollPercentY(1f);
+        // Human trump label under the hand.
+        humanHandTable.row();
+        humanHandTable.add(new Label("Your trump: " + Card.Suit.SPADES.name(), skin))
+                .center();
     }
 }

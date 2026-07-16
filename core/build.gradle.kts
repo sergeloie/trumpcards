@@ -1,9 +1,12 @@
+// :core is the pure game engine. It has no main entry point — platform modules
+// (console, desktop-libgdx, ...) provide the composition root.
 plugins {
-    application
+    `java-library`
 }
 
 dependencies {
     implementation(libs.guava)
+    implementation(libs.gson)
     implementation(libs.lombok)
     annotationProcessor(libs.lombok)
 
@@ -15,10 +18,6 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
-}
-
-application {
-    mainClass = "ru.anseranser.App"
 }
 
 tasks.named<Test>("test") {

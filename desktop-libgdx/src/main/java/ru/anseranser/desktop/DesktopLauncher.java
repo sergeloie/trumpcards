@@ -11,10 +11,16 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import ru.anseranser.i18n.CardLocalizer;
+import ru.anseranser.input.HumanDecisionStrategy;
+import ru.anseranser.model.AiDecisionStrategy;
+import ru.anseranser.model.Card;
+import ru.anseranser.model.DecisionStrategy;
 import ru.anseranser.model.Game;
 import ru.anseranser.model.Game.GameDriver;
-import ru.anseranser.model.HumanPlayer;
 import ru.anseranser.model.Player;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * LibGDX desktop entry point (Windows / Linux / macOS).
@@ -32,6 +38,7 @@ public class DesktopLauncher extends ApplicationAdapter {
 
     private Stage stage;
     private GameScreen screen;
+    private CardAssets assets;
     private Game game;
     private DesktopGameListener listener;
     private DesktopInputProvider input;
@@ -41,8 +48,8 @@ public class DesktopLauncher extends ApplicationAdapter {
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setTitle("Trumpcards");
-        config.setWindowedMode(960, 640);
-        config.setResizable(true);
+        config.setWindowedMode(1920, 1080);
+        config.setResizable(false);
         new Lwjgl3Application(new DesktopLauncher(), config);
     }
 
@@ -58,19 +65,23 @@ public class DesktopLauncher extends ApplicationAdapter {
         skin.add("default", new ScrollPane.ScrollPaneStyle(), ScrollPane.ScrollPaneStyle.class);
 
         input = new DesktopInputProvider();
-        screen = new GameScreen(skin, new CardLocalizer(CardLocalizer.Style.LETTERS), input);
+        assets = new CardAssets();
+        screen = new GameScreen(skin, new CardLocalizer(CardLocalizer.Style.LETTERS), input, assets);
 
-        game = new Game(true); // human player (SPADES) controlled by mouse
+        // Composition root: SPADES seat is human (mouse-driven), the rest are AI.
+        List<Player> players = new ArrayList<>();
+        for (Card.Suit suit : Card.Suit.values()) {
+            DecisionStrategy strategy = (suit == Card.Suit.SPADES)
+                    ? new HumanDecisionStrategy(input)
+                    : new AiDecisionStrategy();
+            players.add(new Player(suit, strategy));
+        }
+        game = new Game(players);
         listener = new DesktopGameListener(game, screen);
         // Repaint when the human's valid choices become known (no engine event
         // is fired for "your turn"), so playable cards get highlighted.
         input.setRepaintHook(() -> listener.requestRepaint());
         game.setListener(listener);
-        for (Player p : game.getPlayers()) {
-            if (p instanceof HumanPlayer human) {
-                human.setInput(input);
-            }
-        }
 
         stage = new Stage();
         stage.addActor(screen);
@@ -94,7 +105,7 @@ public class DesktopLauncher extends ApplicationAdapter {
                     continue;
                 }
                 // Only pause after an AI move; a human move already blocks until a click.
-                if (!(current instanceof HumanPlayer)) {
+                if (!current.isHuman()) {
                     Thread.sleep((long) AI_PAUSE_MS);
                 }
             }
@@ -128,5 +139,6 @@ public class DesktopLauncher extends ApplicationAdapter {
             gameThread.interrupt();
         }
         stage.dispose();
+        assets.dispose();
     }
 }

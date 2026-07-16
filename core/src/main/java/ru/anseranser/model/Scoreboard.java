@@ -77,4 +77,22 @@ public class Scoreboard {
         }
         return snapshot;
     }
+
+    /**
+     * Restore the stacks from a previously taken {@link #snapshot()} (R10). The
+     * supplied lists are top-first, so they are pushed in reverse to preserve the
+     * exact top-to-bottom order. Used when loading a saved game.
+     */
+    void restore(Map<Card.Suit, List<Card>> saved) {
+        for (Card.Suit suit : Card.Suit.values()) {
+            Deque<Card> stack = stacks.get(suit);
+            stack.clear();
+            List<Card> cards = saved.get(suit);
+            if (cards != null) {
+                for (int i = cards.size() - 1; i >= 0; i--) {
+                    stack.push(cards.get(i));
+                }
+            }
+        }
+    }
 }

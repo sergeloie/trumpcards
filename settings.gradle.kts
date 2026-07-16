@@ -1,7 +1,9 @@
 rootProject.name = "trumpcards"
 
-// Core holds the game engine (model + events + i18n) and the console launcher.
-// Platform modules (desktop-libgdx, later android / html) depend on :core and
-// only provide rendering + input, reusing the engine's GameDriver and events.
+// :core is the pure game engine (model + events + i18n). It has no main entry
+// point and no platform dependencies. Each platform (console, desktop-libgdx,
+// and later android / html) is a separate module that depends on :core and only
+// provides rendering + input, reusing the engine's GameDriver and events.
 include("core")
+include("console")
 include("desktop-libgdx")
