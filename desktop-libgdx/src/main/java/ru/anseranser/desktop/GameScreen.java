@@ -145,43 +145,58 @@ final class GameScreen extends Table {
             panel.add(new Label("Trump: " + o.trump().name(), skin)).center();
         }
 
-        // Pot (center)
+        // Pot (center) — overlapping row so a large pot never overflows.
         potTable.clear();
-        if (snap.pot().isEmpty()) {
-            potTable.add(CardView.empty(assets)).pad(2f);
-        } else {
-            for (Card c : snap.pot()) {
-                potTable.add(CardView.face(c, assets, null)).pad(2f);
-            }
-        }
+        addOverlappingRow(potTable, snap.pot(), false);
 
-        // Human hand (bottom) — 4 rows, one per suit, ascending rank.
+        // Human hand (bottom) — a single horizontal row, suit order preserved
+        // (SPADES, CLUBS, DIAMONDS, HEARTS) with cards sorted by rank inside
+        // each suit. Cards keep their true size; when they would overflow the row
+        // width they overlap (stack) instead of shrinking.
         humanHandTable.clear();
-        List<Card> valid = input.validChoices();
-        boolean awaiting = !valid.isEmpty();
-        for (Card.Suit suit : Card.Suit.values()) {
-            List<Card> group = snap.humanHand().stream()
-                    .filter(c -> c.suit() == suit)
-                    .sorted(Comparator.comparingInt(c -> c.rank().getValue()))
-                    .toList();
-            Table suitRow = new Table(skin);
-            if (group.isEmpty()) {
-                suitRow.add(CardView.empty(assets)).pad(2f);
-            }
-            for (Card c : group) {
-                CardView view = CardView.face(c, assets,
-                        card -> input.onCardClicked(card));
-                if (awaiting && valid.contains(c)) {
-                    view.markPlayable();
-                }
-                suitRow.add(view).pad(2f);
-            }
-            humanHandTable.add(suitRow).center().row();
-        }
+        List<Card> hand = snap.humanHand().stream()
+                .sorted(Comparator.comparingInt((Card c) -> c.suit().ordinal())
+                        .thenComparingInt(c -> c.rank().getValue()))
+                .toList();
+        addOverlappingRow(humanHandTable, hand, false);
 
         // Human trump label under the hand.
         humanHandTable.row();
         humanHandTable.add(new Label("Your trump: " + Card.Suit.SPADES.name(), skin))
                 .center();
+    }
+
+    /**
+     * Lay out {@code cards} as a single horizontal row inside {@code row}, keeping
+     * each card at its true size (no scaling). When the natural width (all cards
+     * side by side with a small gap) would exceed {@code maxWidth}, the cards are
+     * overlapped left-to-right by reducing the gap to a negative offset so the row
+     * still fits. {@code rotate} rotates every card 90° (used for side seats).
+     */
+    private void addOverlappingRow(Table row, List<Card> cards, boolean rotate) {
+        if (cards.isEmpty()) {
+            row.add(CardView.empty(assets)).pad(2f);
+            return;
+        }
+        final float gap = 6f;
+        final float maxWidth = 1820f; // leave margins inside the 1920 window
+        float natural = cards.size() * CardView.CARD_W + (cards.size() - 1) * gap;
+        float step = natural <= maxWidth
+                ? CardView.CARD_W + gap
+                : (maxWidth - CardView.CARD_W) / (cards.size() - 1);
+        boolean first = true;
+        for (Card c : cards) {
+            CardView view = CardView.face(c, assets, card -> input.onCardClicked(card));
+            if (rotate) {
+                view.setCardRotation(90f);
+            }
+            if (first) {
+                row.add(view).pad(2f);
+                first = false;
+            } else {
+                // Negative left pad pulls the next card on top of the previous one.
+                row.add(view).pad(2f).padLeft(step - CardView.CARD_W - 4f);
+            }
+        }
     }
 }
