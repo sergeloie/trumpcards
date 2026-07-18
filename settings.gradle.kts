@@ -1,3 +1,11 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = "trumpcards"
 
 // :core is the pure game engine (model + events + i18n). It has no main entry
@@ -7,3 +15,4 @@ rootProject.name = "trumpcards"
 include("core")
 include("console")
 include("desktop-libgdx")
+include("android")

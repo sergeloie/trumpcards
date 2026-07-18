@@ -446,7 +446,7 @@ public class Game {
                 return new InputRequest(current.getTrump(), InputRequest.Kind.LEAD,
                         new ArrayList<>(current.getHand()));
             }
-            Card top = pot.getLast();
+            Card top = pot.get(pot.size() - 1);
             return new InputRequest(current.getTrump(), InputRequest.Kind.DEFEND,
                     current.validDefenses(top));
         }
@@ -515,7 +515,7 @@ public class Game {
                 if (pot.isEmpty() || leadingNewTrick) {
                     pendingAction = PendingHumanAction.LEAD;
                 } else {
-                    Card top = pot.getLast();
+                    Card top = pot.get(pot.size() - 1);
                     if (current.validDefenses(top).isEmpty()) {
                         // No legal defense: the only option is to take the pot (no choice).
                         emit(current.takePot(top, pot), current);
@@ -538,7 +538,7 @@ public class Game {
                 leadingNewTrick = false;
                 return true; // a lead ends the turn
             } else { // DEFEND
-                Card top = pot.getLast();
+                Card top = pot.get(pot.size() - 1);
                 emit(current.beatCard(top, forcedCard, pot), current);
                 if (current.getHand().isEmpty()) {
                     return true; // the beat emptied the hand: turn is over, no follow-up lead

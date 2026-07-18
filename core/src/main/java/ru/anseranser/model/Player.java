@@ -107,7 +107,7 @@ public class Player {
             return actions;
         }
 
-        Card topCard = pot.getLast();
+        Card topCard = pot.get(pot.size() - 1);
         List<Card> defenses = validDefenses(topCard);
 
         if (defenses.isEmpty()) {
