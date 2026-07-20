@@ -10,11 +10,13 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.input.HumanDecisionStrategy;
 import ru.anseranser.model.AiDecisionStrategy;
 import ru.anseranser.model.Card;
 import ru.anseranser.model.DecisionStrategy;
+import ru.anseranser.model.DeckSize;
 import ru.anseranser.model.Game;
 import ru.anseranser.model.Game.GameDriver;
 import ru.anseranser.model.Player;
@@ -37,6 +39,7 @@ public class DesktopLauncher extends ApplicationAdapter {
     private static final float AI_PAUSE_MS = 450f;
 
     private Stage stage;
+    private Skin skin;
     private GameScreen screen;
     private CardAssets assets;
     private Game game;
@@ -59,15 +62,37 @@ public class DesktopLauncher extends ApplicationAdapter {
         // LibGDX resolves the default font under the name "default-font"; without
         // it a Label gets a null font and GlyphLayout throws NPE on any glyph.
         BitmapFont font = new BitmapFont();
-        Skin skin = new Skin();
+        skin = new Skin();
         skin.add("default-font", font, BitmapFont.class);
         skin.add("default", new Label.LabelStyle(font, Color.BLACK), Label.LabelStyle.class);
         skin.add("default", new ScrollPane.ScrollPaneStyle(), ScrollPane.ScrollPaneStyle.class);
+        // Minimal TextButton style (text only — no drawables) so the start menu
+        // buttons can be built without an external skin asset.
+        TextButton.TextButtonStyle textButtonStyle = new TextButton.TextButtonStyle();
+        textButtonStyle.font = font;
+        textButtonStyle.fontColor = Color.BLACK;
+        skin.add("default", textButtonStyle, TextButton.TextButtonStyle.class);
 
         input = new DesktopInputProvider();
         assets = new CardAssets();
         screen = new GameScreen(skin, new CardLocalizer(CardLocalizer.Style.LETTERS), input, assets);
 
+        stage = new Stage();
+        Gdx.input.setInputProcessor(stage);
+
+        // Show the start menu first; the engine starts only after the player
+        // picks a deck size (36 or 52 cards).
+        showStartMenu();
+    }
+
+    /** Display the pre-game deck-size menu. */
+    private void showStartMenu() {
+        stage.clear();
+        stage.addActor(new StartMenu(skin, this::startGameWith));
+    }
+
+    /** Build the game for the chosen deck size and start the engine thread. */
+    private void startGameWith(DeckSize deckSize) {
         // Composition root: SPADES seat is human (mouse-driven), the rest are AI.
         List<Player> players = new ArrayList<>();
         for (Card.Suit suit : Card.Suit.values()) {
@@ -76,16 +101,15 @@ public class DesktopLauncher extends ApplicationAdapter {
                     : new AiDecisionStrategy();
             players.add(new Player(suit, strategy));
         }
-        game = new Game(players);
+        game = new Game(players, deckSize);
         listener = new DesktopGameListener(game, screen);
         // Repaint when the human's valid choices become known (no engine event
         // is fired for "your turn"), so playable cards get highlighted.
         input.setRepaintHook(() -> listener.requestRepaint());
         game.setListener(listener);
 
-        stage = new Stage();
+        stage.clear();
         stage.addActor(screen);
-        Gdx.input.setInputProcessor(stage);
 
         // Run the engine on its own thread so blocking on human input does not
         // stall the render thread that dispatches card clicks.

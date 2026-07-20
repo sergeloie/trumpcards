@@ -45,7 +45,8 @@ import java.util.Optional;
 public class Game {
     @Getter
     private final TurnOrder players;
-    private final Dealer dealer = new Dealer();
+    private final DeckSize deckSize;
+    private final Dealer dealer;
     /**
      * Scoreboard stacks (trump ladders) for rendering. Exposed as an immutable
      * per-suit snapshot (R5) so external code can read but never mutate the
@@ -75,20 +76,37 @@ public class Game {
     int getCappedRounds() { return cappedRounds; }
 
     public Game() {
-        this(defaultPlayers());
+        this(DeckSize.THIRTY_SIX);
+    }
+
+    /** Build a 4-player game (one seat per suit) with the given deck size. */
+    public Game(DeckSize deckSize) {
+        this(defaultPlayers(), deckSize);
     }
 
     /**
-     * Build a game from explicitly provided players. This is the injection seam
-     * for the human seat (R6): a launcher constructs the {@link Player} list,
-     * giving the human seat a {@code HumanDecisionStrategy} (from the input
-     * layer) and the rest an {@link AiDecisionStrategy}. The domain never
-     * decides who is human — that is a composition-root concern.
+     * Build a game from explicitly provided players, using the default 36-card
+     * deck. Kept for backward compatibility; prefer {@link #Game(List, DeckSize)}.
      */
     public Game(List<Player> players) {
-        this.players = new TurnOrder(players);
+        this(players, DeckSize.THIRTY_SIX);
+    }
 
-        scoreboard.init(dealer.deck());
+    /**
+     * Build a game from explicitly provided players with the given deck size.
+     * This is the injection seam for the human seat (R6): a launcher constructs
+     * the {@link Player} list, giving the human seat a {@code HumanDecisionStrategy}
+     * (from the input layer) and the rest an {@link AiDecisionStrategy}. The
+     * domain never decides who is human — that is a composition-root concern.
+     * The deck size (36 or 52) is likewise a composition-root choice made at
+     * launch (see {@link DeckSize}).
+     */
+    public Game(List<Player> players, DeckSize deckSize) {
+        this.players = new TurnOrder(players);
+        this.deckSize = deckSize;
+        this.dealer = new Dealer(deckSize);
+
+        scoreboard.init(dealer.deck(), deckSize.baseRank());
         // Default seat; the real first dealer is chosen at random in startGame().
         dealerSeat = players.get(0);
     }
@@ -638,10 +656,11 @@ public class Game {
                     leadingNewTrick,
                     pendingAction != null ? pendingAction.name() : null,
                     forcedCard);
-            return new SavedGame(
-                    1,
-                    ps,
-                    Game.this.dealerSeat.getTrump().name(),
+        return new SavedGame(
+                1,
+                Game.this.deckSize,
+                ps,
+                Game.this.dealerSeat.getTrump().name(),
                     new ArrayList<>(Game.this.pot),
                     Game.this.scoreboard.snapshot(),
                     new ArrayList<>(Game.this.dealer.deck()),
@@ -695,7 +714,7 @@ public class Game {
             for (Card c : ps.hand()) p.addCard(c);
             players.add(p);
         }
-        Game g = new Game(players);
+        Game g = new Game(players, saved.deckSize() != null ? saved.deckSize() : DeckSize.THIRTY_SIX);
         g.dealerSeat = playerByTrump(g, saved.dealerSeatTrump());
         g.scoreboard.restore(saved.scoreboard());
         g.pot.clear();

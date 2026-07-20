@@ -31,10 +31,10 @@ class GameSimulatorTest {
         assertEquals(200, results.size());
 
         for (GameSimulator.Result r : results) {
-            assertEquals(36, r.totalCards(),
-                    "Seed " + r.seed() + ": all 36 cards must be in players' hands at game end");
-            assertEquals(36, r.distinctCards(),
-                    "Seed " + r.seed() + ": all 36 cards must be distinct (no duplicates/loss)");
+            assertEquals(r.expectedCards(), r.totalCards(),
+                    "Seed " + r.seed() + ": all cards must be in players' hands at game end");
+            assertEquals(r.expectedCards(), r.distinctCards(),
+                    "Seed " + r.seed() + ": all cards must be distinct (no duplicates/loss)");
             assertEquals(1, r.activeGamers(),
                     "Seed " + r.seed() + ": exactly one player must remain a gamer");
             assertNotNull(r.winnerTrump(),

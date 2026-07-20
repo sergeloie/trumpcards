@@ -2,6 +2,12 @@ package ru.anseranser.model;
 
 import org.junit.jupiter.api.Test;
 
+import ru.anseranser.model.DeckSize;
+import ru.anseranser.model.Player;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,5 +89,55 @@ class GameSerializationTest {
         // Re-parsing must not throw and must round-trip the rng seed.
         SavedGame reloaded = SavedGame.fromJson(json);
         assertEquals(driver.save().rngSeed(), reloaded.rngSeed());
+    }
+
+    @Test
+    void savedGameFiftyTwoDeck_roundTripsDeckSize() {
+        // A 52-card game must serialize its deck size and resume identically.
+        Game reference = new Game(defaultPlayers(), DeckSize.FIFTY_TWO);
+        reference.playGame(new SplitMix64(SEED));
+        Card.Suit expectedWinner = reference.getWinner().getTrump();
+
+        Game game = new Game(defaultPlayers(), DeckSize.FIFTY_TWO);
+        game.setRng(new SplitMix64(SEED));
+        Game.GameDriver driver = game.createDriver();
+        driver.startGame();
+        int steps = 0;
+        while (!driver.isGameOver() && steps < SAVE_AFTER_STEPS) {
+            if (!driver.step()) {
+                driver.finishRound();
+                continue;
+            }
+            steps++;
+        }
+        assertFalse(driver.isGameOver(), "save point should be mid-game for the test to be meaningful");
+        assertEquals(52, totalCards(game), "card conservation broken at save point (52-card deck)");
+
+        SavedGame saved = driver.save();
+        assertEquals(DeckSize.FIFTY_TWO, saved.deckSize(), "deck size must be persisted");
+
+        String json = saved.toJson();
+        SavedGame reloaded = SavedGame.fromJson(json);
+        assertEquals(DeckSize.FIFTY_TWO, reloaded.deckSize(), "deck size must round-trip through JSON");
+
+        Game.GameDriver resumed = Game.restore(reloaded, suit -> new AiDecisionStrategy());
+        while (!resumed.isGameOver()) {
+            while (resumed.step()) {
+                // render / animate between moves
+            }
+            resumed.finishRound();
+        }
+
+        assertEquals(expectedWinner, resumed.getGame().getWinner().getTrump(),
+                "resumed 52-card game must finish with the same winner");
+        assertEquals(52, totalCards(resumed.getGame()), "card conservation broken after resume");
+    }
+
+    private static List<Player> defaultPlayers() {
+        List<Player> order = new ArrayList<>();
+        for (Card.Suit suit : Card.Suit.values()) {
+            order.add(new Player(suit));
+        }
+        return order;
     }
 }

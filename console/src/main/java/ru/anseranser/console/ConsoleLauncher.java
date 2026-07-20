@@ -9,6 +9,7 @@ import ru.anseranser.input.HumanDecisionStrategy;
 import ru.anseranser.model.AiDecisionStrategy;
 import ru.anseranser.model.Card;
 import ru.anseranser.model.DecisionStrategy;
+import ru.anseranser.model.DeckSize;
 import ru.anseranser.model.Game;
 import ru.anseranser.model.Player;
 
@@ -23,6 +24,9 @@ public class ConsoleLauncher {
         // knows nothing about consoles or input — it only sees DecisionStrategy.
         ConsoleInputProvider input = new ConsoleInputProvider();
 
+        // Launch-time choice: play with a 36- or 52-card deck.
+        DeckSize deckSize = input.chooseDeckSize();
+
         List<Player> players = new ArrayList<>();
         for (Card.Suit suit : Card.Suit.values()) {
             DecisionStrategy strategy = (suit == Card.Suit.SPADES)
@@ -31,7 +35,7 @@ public class ConsoleLauncher {
             players.add(new Player(suit, strategy));
         }
 
-        Game game = new Game(players);
+        Game game = new Game(players, deckSize);
         game.setListener(new ConsoleGameListener());
         game.playGame();
     }

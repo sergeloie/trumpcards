@@ -54,6 +54,10 @@ final class CardAssets {
     /** Filename rank code, matching the asset catalog (2..10 digits, J/Q/K/A letters). */
     private static String rankCode(Card.Rank rank) {
         return switch (rank) {
+            case TWO -> "2";
+            case THREE -> "3";
+            case FOUR -> "4";
+            case FIVE -> "5";
             case SIX -> "6";
             case SEVEN -> "7";
             case EIGHT -> "8";

@@ -24,6 +24,7 @@ import java.util.Map;
  */
 public record SavedGame(
         int version,
+        DeckSize deckSize,
         List<PlayerState> players,
         String dealerSeatTrump,
         List<Card> pot,

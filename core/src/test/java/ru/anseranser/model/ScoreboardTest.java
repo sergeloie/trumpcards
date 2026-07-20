@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import ru.anseranser.model.DeckSize;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -18,7 +20,7 @@ class ScoreboardTest {
     void init_placesSixOfEachSuit() {
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck());
+        sb.init(dealer.deck(), Card.Rank.SIX);
 
         for (Card.Suit suit : Card.Suit.values()) {
             assertEquals(1, sb.snapshot().get(suit).size(),
@@ -33,10 +35,28 @@ class ScoreboardTest {
     }
 
     @Test
+    void init_placesTwoOfEachSuit_forFiftyTwoDeck() {
+        Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
+        Scoreboard sb = new Scoreboard();
+        sb.init(dealer.deck(), Card.Rank.TWO);
+
+        for (Card.Suit suit : Card.Suit.values()) {
+            assertEquals(1, sb.snapshot().get(suit).size(),
+                    "Each stack should hold exactly one card after init");
+            Card top = sb.snapshot().get(suit).get(0);
+            assertEquals(Card.Rank.TWO, top.rank());
+            assertEquals(suit, top.suit());
+        }
+
+        // Deck is reduced by 4 (the four TWOs moved to the scoreboard).
+        assertEquals(48, dealer.deck().size());
+    }
+
+    @Test
     void nextRequiredRank_ladderAdvancesAndTerminates() {
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck());
+        sb.init(dealer.deck(), Card.Rank.SIX);
 
         // After SIX: expect SEVEN, then ... up to KING. ACE is the terminal
         // (the ladder owner keeps the ACE in hand, it is never exchanged).
@@ -56,6 +76,27 @@ class ScoreboardTest {
         // After KING is pushed, the next required rank is ACE — the ladder owner
         // keeps the ACE in hand (it is never exchanged), so ACE is the terminal
         // sentinel returned by nextRequiredRank.
+        assertEquals(Card.Rank.ACE, sb.nextRequiredRank(Card.Suit.SPADES),
+                "After KING the ladder reaches ACE (terminal sentinel)");
+    }
+
+    @Test
+    void nextRequiredRank_fiftyTwoDeck_ladderRunsTwoToAce() {
+        Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
+        Scoreboard sb = new Scoreboard();
+        sb.init(dealer.deck(), Card.Rank.TWO);
+
+        // After TWO the ladder advances THREE, FOUR, FIVE, ... up to KING, then ACE.
+        Card.Rank[] ladder = {
+                Card.Rank.THREE, Card.Rank.FOUR, Card.Rank.FIVE,
+                Card.Rank.SIX, Card.Rank.SEVEN, Card.Rank.EIGHT, Card.Rank.NINE,
+                Card.Rank.TEN, Card.Rank.JACK, Card.Rank.QUEEN, Card.Rank.KING
+        };
+        for (Card.Rank r : ladder) {
+            assertEquals(r, sb.nextRequiredRank(Card.Suit.SPADES),
+                    "nextRequiredRank should advance the ladder");
+            sb.pushAndEliminates(new Card(Card.Suit.SPADES, r));
+        }
         assertEquals(Card.Rank.ACE, sb.nextRequiredRank(Card.Suit.SPADES),
                 "After KING the ladder reaches ACE (terminal sentinel)");
     }

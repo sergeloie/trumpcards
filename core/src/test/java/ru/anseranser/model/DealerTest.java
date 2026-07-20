@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import ru.anseranser.model.DeckSize;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -44,7 +46,7 @@ class DealerTest {
 
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck()); // removes 4 SIXes → 32 cards left
+        sb.init(dealer.deck(), DeckSize.THIRTY_SIX.baseRank()); // removes 4 SIXes → 32 cards left
 
         dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
@@ -70,7 +72,7 @@ class DealerTest {
 
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck());
+        sb.init(dealer.deck(), DeckSize.THIRTY_SIX.baseRank());
 
         dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
@@ -81,5 +83,37 @@ class DealerTest {
 
         int activeTotal = order.get(0).getHand().size() + order.get(2).getHand().size();
         assertEquals(32, activeTotal);
+    }
+
+    @Test
+    void deckHasFiftyTwoUniqueCards() {
+        Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
+        assertEquals(52, dealer.deck().size());
+        long distinct = dealer.deck().stream().distinct().count();
+        assertEquals(52, distinct, "All 52 cards must be distinct");
+    }
+
+    @Test
+    void fiftyTwoDeck_dealDistributesAllNonScoreboardCards() {
+        // 52 cards minus the 4 TWOs moved to the scoreboard → 48 dealt.
+        List<Player> order = new ArrayList<>();
+        for (Card.Suit suit : Card.Suit.values()) {
+            order.add(new Player(suit));
+        }
+        TurnOrder turnOrder = new TurnOrder(order);
+
+        Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
+        Scoreboard sb = new Scoreboard();
+        sb.init(dealer.deck(), DeckSize.FIFTY_TWO.baseRank());
+
+        dealer.shuffle(new SplitMix64(7));
+        dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
+
+        int total = 0;
+        for (Player p : turnOrder) {
+            assertFalse(p.getHand().isEmpty(), "Active player should receive cards");
+            total += p.getHand().size();
+        }
+        assertEquals(48, total, "All 48 non-scoreboard cards must be dealt");
     }
 }

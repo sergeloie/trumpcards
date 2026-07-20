@@ -26,10 +26,15 @@ public class Scoreboard {
         }
     }
 
-    /** Extract the SIX of each suit from the deck into its stack. Call once, after the deck is built. */
-    public void init(List<Card> deck) {
+    /**
+     * Extract the base card of each suit from the deck into its stack. Call once,
+     * after the deck is built. The base rank is the lowest rank in the active
+     * deck (SIX for a 36-card deck, TWO for a 52-card deck) — supplied by the
+     * caller so the scoreboard ladder starts from the correct lowest card.
+     */
+    public void init(List<Card> deck, Card.Rank baseRank) {
         for (Card.Suit suit : Card.Suit.values()) {
-            stacks.get(suit).push(extract(deck, suit, Card.Rank.SIX));
+            stacks.get(suit).push(extract(deck, suit, baseRank));
         }
     }
 

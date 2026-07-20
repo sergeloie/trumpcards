@@ -71,4 +71,22 @@ final class CardView extends Container<Image> {
         // Keep the widget's footprint square so layout math stays simple.
         setSize(CARD_H, CARD_W);
     }
+
+    /**
+     * Return a copy of {@code s} with every non-ASCII character replaced by '?'.
+     * The default LibGDX {@code BitmapFont} only ships ASCII glyphs, so any
+     * non-ASCII text reaching a {@code Label} throws a GlyphLayout NPE. A null
+     * input yields an empty string.
+     */
+    static String ascii(String s) {
+        if (s == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            sb.append(c > 127 ? '?' : c);
+        }
+        return sb.toString();
+    }
 }

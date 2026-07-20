@@ -32,6 +32,7 @@ public class GameSimulator {
     private final int games;
     private final int startSeed;
     private final DecisionStrategy humanStrategy;
+    private final DeckSize deckSize;
 
     /**
      * @param humanStrategy strategy for the SPADES seat (pass {@code null} for a
@@ -39,9 +40,15 @@ public class GameSimulator {
      *                      flag so the domain stays free of any input dependency (R6/R8).
      */
     public GameSimulator(int games, int startSeed, DecisionStrategy humanStrategy) {
+        this(games, startSeed, humanStrategy, DeckSize.THIRTY_SIX);
+    }
+
+    /** Overload that lets the caller pick the deck size (36 or 52 cards). */
+    public GameSimulator(int games, int startSeed, DecisionStrategy humanStrategy, DeckSize deckSize) {
         this.games = games;
         this.startSeed = startSeed;
         this.humanStrategy = humanStrategy;
+        this.deckSize = deckSize;
     }
 
     public record Result(
@@ -51,10 +58,11 @@ public class GameSimulator {
             long distinctCards,
             int activeGamers,
             int rounds,
-            int cappedRounds) {
+            int cappedRounds,
+            int expectedCards) {
         boolean invariantsHold() {
-            return totalCards == 36
-                    && distinctCards == 36
+            return totalCards == expectedCards
+                    && distinctCards == expectedCards
                     && activeGamers == 1;
         }
     }
@@ -84,7 +92,7 @@ public class GameSimulator {
                     ? humanStrategy : new AiDecisionStrategy();
             players.add(new Player(suit, s));
         }
-        Game game = new Game(players);
+        Game game = new Game(players, deckSize);
         game.playGame(new SplitMix64(seed));
 
         List<Card> allCards = game.allCards();
@@ -106,6 +114,7 @@ public class GameSimulator {
                 seen.size(),
                 activeGamers,
                 game.getRoundsPlayed(),
-                game.getCappedRounds());
+                game.getCappedRounds(),
+                deckSize.cardCount());
     }
 }

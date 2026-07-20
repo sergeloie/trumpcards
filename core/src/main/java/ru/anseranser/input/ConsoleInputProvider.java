@@ -3,6 +3,7 @@ package ru.anseranser.input;
 import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.i18n.Messages;
 import ru.anseranser.model.Card;
+import ru.anseranser.model.DeckSize;
 import ru.anseranser.model.Player;
 
 import java.util.List;
@@ -69,6 +70,24 @@ public class ConsoleInputProvider implements InputProvider {
             Integer choice = readChoice(validDefenses.size());
             if (choice != null) {
                 return validDefenses.get(choice - 1);
+            }
+            System.out.println(messages.get("prompt.invalid"));
+        }
+    }
+
+    /**
+     * Ask the human which deck size to play with before the game starts. This is
+     * a launch-time choice (36 or 52 cards), not an in-game decision, so it lives
+     * on the console provider as a convenience used by the launcher.
+     *
+     * @return the chosen {@link DeckSize}
+     */
+    public DeckSize chooseDeckSize() {
+        while (true) {
+            System.out.print(messages.get("prompt.choose_deck"));
+            Integer choice = readChoice(2);
+            if (choice != null) {
+                return choice == 1 ? DeckSize.THIRTY_SIX : DeckSize.FIFTY_TWO;
             }
             System.out.println(messages.get("prompt.invalid"));
         }

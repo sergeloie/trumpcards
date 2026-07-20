@@ -86,6 +86,10 @@ public class CardLocalizer {
     /** Language-independent ASCII rank code used by the LETTERS style (6/7/8/9/10/J/Q/K/A). */
     public String rankLetter(Card.Rank rank) {
         return switch (rank) {
+            case TWO -> "2";
+            case THREE -> "3";
+            case FOUR -> "4";
+            case FIVE -> "5";
             case SIX -> "6";
             case SEVEN -> "7";
             case EIGHT -> "8";
