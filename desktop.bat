@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set PROJECT_DIR=C:\Users\admin\IdeaProjects\trumpcards
+set PROJECT_DIR=C:\DevProjects\trumpcards
 
 echo ===============================
 echo  Rebuild project...

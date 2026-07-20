@@ -5,6 +5,12 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
 
 rootProject.name = "trumpcards"
 
@@ -15,4 +21,3 @@ rootProject.name = "trumpcards"
 include("core")
 include("console")
 include("desktop-libgdx")
-include("android")
