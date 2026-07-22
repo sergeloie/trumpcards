@@ -1,0 +1,3 @@
+-keepattributes *Annotation*
+-keep class ru.anseranser.trumpcards.** { *; }
+-keepclassmembers class kotlinx.serialization.json.** { *** Companion; }

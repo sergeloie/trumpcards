@@ -1,0 +1,298 @@
+﻿id: trump_cards_state_machine_v1
+
+# =========================
+# GLOBAL CONFIG
+# =========================
+
+Config:
+  deckType: {36 | 52}
+
+  ranks:
+    36: [SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE]
+    52: [TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE]
+
+  suits: [SPADES, CLUBS, DIAMONDS, HEARTS]
+
+  maxMovesPerRound: 10000
+
+  # Детерминированный RNG (Linear Congruential Generator)
+  rng:
+    seed: int
+    next():
+      seed = (1664525 * seed + 1013904223) mod 2^32
+      return seed
+
+    nextInt(n):
+      return next() mod n
+
+
+# =========================
+# CORE DATA STRUCTURES
+# =========================
+
+Card:
+  suit: Suit
+  rank: Rank
+
+Player:
+  id: string
+  hand: List<Card>
+  trumpSuit: Suit
+  scoreboard: List<Card>
+  status: {ACTIVE, OUT_OF_CARDS, ELIMINATED}
+
+GameState:
+  players: List<Player>
+  dealerIndex: int
+  activePlayerIndices: List<int>   # исключает ELIMINATED
+  deck: List<Card>                # играбельная колода (без scoreboard карт)
+  rngState: int
+
+RoundState:
+  attackerIndex: int
+  pile: List<Card>
+  moveCounter: int
+
+
+# =========================
+# INVARIANTS (CRITICAL)
+# =========================
+
+Invariants:
+
+  - Each card exists in exactly one place:
+      {deck, player.hand, pile, scoreboard}
+
+  - Scoreboard cards are removed permanently from deck
+
+  - For each player:
+      scoreboard is strictly ordered by rank
+
+  - For each ACTIVE player:
+      nextRequiredCard exists in {deck ∪ hands ∪ pile}
+
+  - No duplicate cards in system
+
+  - Sum(cards in all zones) == initial deck size
+
+  - Player with status ELIMINATED:
+      not in activePlayerIndices
+      not dealt cards
+
+  - OUT_OF_CARDS:
+      hand == []
+      still ACTIVE until round ends
+
+
+# =========================
+# HELPER FUNCTIONS
+# =========================
+
+Functions:
+
+  nextPlayerIndex(currentIndex):
+    loop clockwise until player.status != ELIMINATED
+
+  nextActiveWithCards(currentIndex):
+    loop clockwise until player.hand.size > 0
+
+  nextRequiredCard(player):
+    last = last(player.scoreboard)
+    return next rank in same suit
+
+  canBeat(defenseCard, attackCard, defenderTrump):
+
+    if defenseCard.suit == attackCard.suit:
+      return defenseCard.rank > attackCard.rank
+
+    if defenseCard.suit == defenderTrump
+       and attackCard.suit != defenderTrump:
+      return true
+
+    return false
+
+
+# =========================
+# GAME STATE MACHINE
+# =========================
+
+GameStates:
+
+  - INIT
+  - ROUND_SETUP
+  - CARD_EXCHANGE
+  - ROUND_PLAY
+  - ROUND_END
+  - GAME_END
+
+
+# =========================
+# STATE: INIT
+# =========================
+
+INIT:
+
+  action:
+    - create full deck
+    - assign trump suits:
+        SPADES (human), CLUBS, DIAMONDS, HEARTS
+    - initialize scoreboard:
+        each player gets lowest rank of their suit
+        remove these cards from deck
+    - set all players ACTIVE
+    - dealerIndex = rng.nextInt(4)
+
+  transition:
+    -> ROUND_SETUP
+
+
+# =========================
+# STATE: ROUND_SETUP
+# =========================
+
+ROUND_SETUP:
+
+  action:
+    - rebuild deck = all non-scoreboard cards
+    - shuffle deck using rng (Fisher-Yates with deterministic RNG)
+    - clear all hands
+    - deal cards one-by-one starting from next after dealer
+    - set all ACTIVE players:
+        if hand empty → OUT_OF_CARDS
+    - attackerIndex = dealerIndex
+    - initialize RoundState:
+        pile = []
+        moveCounter = 0
+
+  transition:
+    -> CARD_EXCHANGE
+
+
+# =========================
+# STATE: CARD_EXCHANGE
+# =========================
+
+CARD_EXCHANGE:
+
+  action:
+    - For each player A:
+        for each card C in A.hand:
+          let B = owner of C.suit
+          if C.rank == nextRequiredCard(B)
+             and C.rank != ACE:
+                mark transfer A -> B
+
+    - Execute all transfers simultaneously
+
+  constraints:
+    - no chain exchange
+    - executed exactly once
+
+  transition:
+    -> ROUND_PLAY
+
+
+# =========================
+# STATE: ROUND_PLAY
+# =========================
+
+ROUND_PLAY:
+
+  loop:
+
+    - if count(players with hand > 0) == 1:
+        -> ROUND_END
+
+    - if moveCounter >= maxMovesPerRound:
+        -> ROUND_END
+
+    - attacker = players[attackerIndex]
+
+    - if attacker.hand empty:
+        attackerIndex = nextActiveWithCards(attackerIndex)
+        continue
+
+    # ATTACK
+    - attackCard = attacker chooses any card
+    - move attackCard → pile
+
+    - defenderIndex = nextPlayerIndex(attackerIndex)
+    - defender = players[defenderIndex]
+
+    # DEFENSE
+    - if defender.hand empty:
+        attackerIndex = nextActiveWithCards(defenderIndex)
+        continue
+
+    - if defender has card that canBeat:
+        - defenseCard chosen deterministically or by agent
+        - move defenseCard → pile
+        - attackerIndex = defenderIndex
+        - moveCounter += 1
+        - continue
+
+    else:
+        # TAKE PILE
+        - move all pile cards → defender.hand
+        - pile = []
+        - attackerIndex = nextActiveWithCards(defenderIndex)
+        - moveCounter += 1
+        - continue
+
+
+# =========================
+# STATE: ROUND_END
+# =========================
+
+ROUND_END:
+
+  action:
+
+    if ended by "one player has cards":
+      loser = that player
+
+    else:
+      maxCards = max(hand.size)
+      candidates = players with that size
+
+      if len(candidates) == 1:
+        loser = candidates[0]
+      else:
+        loser = candidates[rng.nextInt(len(candidates))]
+
+    # COLLECT ALL CARDS
+    deck = pile + all players hands
+    clear pile
+    clear all hands
+
+    # PROGRESS SCOREBOARD
+    card = nextRequiredCard(loser)
+    remove card from deck
+    append card to loser.scoreboard
+
+    # ELIMINATION
+    if card.rank == ACE:
+      loser.status = ELIMINATED
+
+    # NEXT DEALER
+    dealerIndex = loser.index
+    if loser.status == ELIMINATED:
+      dealerIndex = nextPlayerIndex(loser.index)
+
+  transition:
+
+    if count(ACTIVE players) == 1:
+      -> GAME_END
+    else:
+      -> ROUND_SETUP
+
+
+# =========================
+# STATE: GAME_END
+# =========================
+
+GAME_END:
+
+  winner = only ACTIVE player
+
+  terminate
