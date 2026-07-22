@@ -9,18 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import ru.anseranser.model.Card
@@ -63,33 +58,34 @@ fun GameScreen(
             contentScale = ContentScale.Crop,
         )
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Top: Scoreboard
-            Scoreboard(scoreboard = state.scoreboard)
+            // Top zone: Scoreboard + top opponent
+            Column(
+                modifier = Modifier.align(Alignment.TopCenter),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Scoreboard(scoreboard = state.scoreboard)
 
-            Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-            // Top opponent (DIAMONDS)
-            val topOpponent = state.opponents.find { it.suit == Card.Suit.DIAMONDS }
-            if (topOpponent != null) {
-                OpponentArea(opponent = topOpponent)
+                val topOpponent = state.opponents.find { it.suit == Card.Suit.DIAMONDS }
+                if (topOpponent != null) {
+                    OpponentArea(opponent = topOpponent)
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Middle area: Left bot, Pot, Right bot
+            // Center zone: always at screen center
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                    .align(Alignment.Center)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Left opponent (CLUBS)
                 val leftOpponent = state.opponents.find { it.suit == Card.Suit.CLUBS }
                 if (leftOpponent != null) {
                     OpponentArea(opponent = leftOpponent)
@@ -97,44 +93,28 @@ fun GameScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Pot in the center
                 PotArea(pot = state.pot)
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Right opponent (HEARTS)
                 val rightOpponent = state.opponents.find { it.suit == Card.Suit.HEARTS }
                 if (rightOpponent != null) {
                     OpponentArea(opponent = rightOpponent)
                 }
             }
 
-            // Trump label
-            state.trump?.let { trump ->
-                Text(
-                    text = "Your trump: ${trumpSymbol(trump)}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(vertical = 2.dp),
-                )
-            }
-
-            // Bottom: Player hand in 4 rows by suit
+            // Bottom zone: Player hand
             PlayerHand(
                 hand = state.humanHand,
                 playableCards = state.inputRequest?.validCards ?: emptyList(),
                 onCardClick = { card ->
                     onIntent(GameIntent.CardChosen(card))
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
             )
         }
     }
-}
-
-private fun trumpSymbol(trump: Card.Suit): String = when (trump) {
-    Card.Suit.SPADES -> "\u2660 SPADES"
-    Card.Suit.CLUBS -> "\u2663 CLUBS"
-    Card.Suit.DIAMONDS -> "\u2666 DIAMONDS"
-    Card.Suit.HEARTS -> "\u2665 HEARTS"
 }
