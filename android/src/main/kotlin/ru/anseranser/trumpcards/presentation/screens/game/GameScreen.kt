@@ -71,12 +71,14 @@ fun GameScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 Scoreboard(scoreboard = state.scoreboard)
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(78.dp))
 
                 val topOpponent = state.opponents.find { it.suit == Card.Suit.DIAMONDS }
                 if (topOpponent != null) {
                     OpponentArea(opponent = topOpponent)
                 }
+
+                Spacer(modifier = Modifier.height(78.dp))
             }
 
             // Center zone: always at screen center

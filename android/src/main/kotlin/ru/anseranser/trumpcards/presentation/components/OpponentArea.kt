@@ -25,8 +25,8 @@ fun OpponentArea(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = suitLabel(opponent.suit),
-            fontSize = 12.sp,
+            text = suitSymbol(opponent.suit),
+            fontSize = 36.sp,
             fontWeight = FontWeight.Bold,
             color = suitColor(opponent.suit),
             modifier = Modifier.padding(bottom = 2.dp),
@@ -50,11 +50,11 @@ fun OpponentArea(
     }
 }
 
-private fun suitLabel(suit: Card.Suit): String = when (suit) {
-    Card.Suit.SPADES -> "\u2660 SPADES"
-    Card.Suit.CLUBS -> "\u2663 CLUBS"
-    Card.Suit.DIAMONDS -> "\u2666 DIAMONDS"
-    Card.Suit.HEARTS -> "\u2665 HEARTS"
+private fun suitSymbol(suit: Card.Suit): String = when (suit) {
+    Card.Suit.SPADES -> "\u2660"
+    Card.Suit.CLUBS -> "\u2663"
+    Card.Suit.DIAMONDS -> "\u2666"
+    Card.Suit.HEARTS -> "\u2665"
 }
 
 private fun suitColor(suit: Card.Suit): Color = when (suit) {
