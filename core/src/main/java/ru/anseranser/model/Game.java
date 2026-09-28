@@ -46,7 +46,12 @@ public class Game {
     @Getter
     private final TurnOrder players;
     private final DeckSize deckSize;
-    private final Dealer dealer;
+    /**
+     * The card dealer (dealing seam). Defaults to the RNG-driven {@link Dealer};
+     * tests may replace it via {@link #setCardDealer(CardDealer)} to script an
+     * exact layout without touching the RNG.
+     */
+    private CardDealer dealer;
     /**
      * Scoreboard stacks (trump ladders) for rendering. Exposed as an immutable
      * per-suit snapshot (R5) so external code can read but never mutate the
@@ -106,7 +111,7 @@ public class Game {
         this.deckSize = deckSize;
         this.dealer = new Dealer(deckSize);
 
-        scoreboard.init(dealer.deck(), deckSize.baseRank());
+        scoreboard.init(dealer.takeBaseCards(deckSize.baseRank()));
         // Default seat; the real first dealer is chosen at random in startGame().
         dealerSeat = players.get(0);
     }
@@ -121,6 +126,66 @@ public class Game {
 
     public void setListener(GameListener listener) {
         this.listener = listener;
+    }
+
+    /**
+     * Replace the card dealer, e.g. to inject a deterministic test dealer.
+     * Intended to be called before the game starts (before {@link #playGame()} or
+     * {@link GameDriver#startGame()}); the scoreboard setup already performed in
+     * the constructor is independent of the dealer's pool.
+     *
+     * @throws NullPointerException if {@code dealer} is null
+     */
+    public void setCardDealer(CardDealer dealer) {
+        this.dealer = java.util.Objects.requireNonNull(dealer, "dealer");
+    }
+
+    /** The card dealer currently used by this game (never null). */
+    public CardDealer getCardDealer() {
+        return dealer;
+    }
+
+    // ---------- Serialization seam (I3: SavedGameMapper) ----------
+    // Package-private accessors used only by SavedGameMapper (same package).
+    // Everything else — the engine and all platform modules — keeps going
+    // through the public API, so the persisted layout lives in exactly one place.
+
+    /** Deck size of this game (36 or 52). */
+    DeckSize deckSize() {
+        return deckSize;
+    }
+
+    /** The seat that deals the current round. */
+    Player dealerSeat() {
+        return dealerSeat;
+    }
+
+    void setDealerSeat(Player dealerSeat) {
+        this.dealerSeat = dealerSeat;
+    }
+
+    /** The RNG whose {@link Rng#getState() state} is persisted. */
+    Rng getRng() {
+        return rng;
+    }
+
+    /** The live scoreboard, so {@link Scoreboard#restore} can repopulate it. */
+    Scoreboard getScoreboardStacks() {
+        return scoreboard;
+    }
+
+    /** Replace the pot contents (used only when loading a saved game). */
+    void setPot(List<Card> cards) {
+        pot.clear();
+        pot.addAll(cards);
+    }
+
+    void setRoundsPlayed(int roundsPlayed) {
+        this.roundsPlayed = roundsPlayed;
+    }
+
+    void setCappedRounds(int cappedRounds) {
+        this.cappedRounds = cappedRounds;
     }
 
     // ---------- Setup / dealing ----------
@@ -280,7 +345,7 @@ public class Game {
         }
 
         // Return remaining cards to the shared deck pool for the next round.
-        dealer.deck().addAll(pile);
+        dealer.returnCards(pile);
 
         listener.onEvent(new GameEvent.RoundEnded(
                 loser.getTrump(), pushed, snapshotScoreboard(), eliminated));

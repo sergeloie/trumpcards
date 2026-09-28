@@ -5,7 +5,6 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.guava)
     implementation(libs.gson)
     implementation(libs.lombok)
     annotationProcessor(libs.lombok)

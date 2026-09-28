@@ -4,7 +4,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.EnumMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -27,27 +26,27 @@ public class Scoreboard {
     }
 
     /**
-     * Extract the base card of each suit from the deck into its stack. Call once,
-     * after the deck is built. The base rank is the lowest rank in the active
-     * deck (SIX for a 36-card deck, TWO for a 52-card deck) — supplied by the
-     * caller so the scoreboard ladder starts from the correct lowest card.
+     * Seed each suit's stack with its base card (one per suit), completing the
+     * ladder's starting point. Call once during game setup. The base cards come
+     * from the {@link CardDealer} (see {@link CardDealer#takeBaseCards}) rather
+     * than being extracted here, so the scoreboard never mutates the dealer's
+     * card pool.
+     *
+     * @param baseCards exactly one base-rank card per suit
      */
-    public void init(List<Card> deck, Card.Rank baseRank) {
+    public void init(List<Card> baseCards) {
         for (Card.Suit suit : Card.Suit.values()) {
-            stacks.get(suit).push(extract(deck, suit, baseRank));
+            stacks.get(suit).push(requireCardOfSuit(baseCards, suit));
         }
     }
 
-    private static Card extract(List<Card> deck, Card.Suit suit, Card.Rank rank) {
-        Iterator<Card> it = deck.iterator();
-        while (it.hasNext()) {
-            Card c = it.next();
-            if (c.suit() == suit && c.rank() == rank) {
-                it.remove();
+    private static Card requireCardOfSuit(List<Card> baseCards, Card.Suit suit) {
+        for (Card c : baseCards) {
+            if (c.suit() == suit) {
                 return c;
             }
         }
-        throw new IllegalStateException("Card " + rank + " of " + suit + " not found in the deck");
+        throw new IllegalArgumentException("No base card for suit " + suit + " in " + baseCards);
     }
 
     /**

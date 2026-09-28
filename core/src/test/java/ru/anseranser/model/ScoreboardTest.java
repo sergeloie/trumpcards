@@ -20,7 +20,7 @@ class ScoreboardTest {
     void init_placesSixOfEachSuit() {
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), Card.Rank.SIX);
+        sb.init(dealer.takeBaseCards(Card.Rank.SIX));
 
         for (Card.Suit suit : Card.Suit.values()) {
             assertEquals(1, sb.snapshot().get(suit).size(),
@@ -38,7 +38,7 @@ class ScoreboardTest {
     void init_placesTwoOfEachSuit_forFiftyTwoDeck() {
         Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), Card.Rank.TWO);
+        sb.init(dealer.takeBaseCards(Card.Rank.TWO));
 
         for (Card.Suit suit : Card.Suit.values()) {
             assertEquals(1, sb.snapshot().get(suit).size(),
@@ -56,7 +56,7 @@ class ScoreboardTest {
     void nextRequiredRank_ladderAdvancesAndTerminates() {
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), Card.Rank.SIX);
+        sb.init(dealer.takeBaseCards(Card.Rank.SIX));
 
         // After SIX: expect SEVEN, then ... up to KING. ACE is the terminal
         // (the ladder owner keeps the ACE in hand, it is never exchanged).
@@ -84,7 +84,7 @@ class ScoreboardTest {
     void nextRequiredRank_fiftyTwoDeck_ladderRunsTwoToAce() {
         Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), Card.Rank.TWO);
+        sb.init(dealer.takeBaseCards(Card.Rank.TWO));
 
         // After TWO the ladder advances THREE, FOUR, FIVE, ... up to KING, then ACE.
         Card.Rank[] ladder = {

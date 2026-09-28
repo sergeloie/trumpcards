@@ -46,7 +46,7 @@ class DealerTest {
 
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), DeckSize.THIRTY_SIX.baseRank()); // removes 4 SIXes → 32 cards left
+        sb.init(dealer.takeBaseCards(DeckSize.THIRTY_SIX.baseRank())); // removes 4 SIXes → 32 cards left
 
         dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
@@ -72,7 +72,7 @@ class DealerTest {
 
         Dealer dealer = new Dealer();
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), DeckSize.THIRTY_SIX.baseRank());
+        sb.init(dealer.takeBaseCards(DeckSize.THIRTY_SIX.baseRank()));
 
         dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
@@ -104,7 +104,7 @@ class DealerTest {
 
         Dealer dealer = new Dealer(DeckSize.FIFTY_TWO);
         Scoreboard sb = new Scoreboard();
-        sb.init(dealer.deck(), DeckSize.FIFTY_TWO.baseRank());
+        sb.init(dealer.takeBaseCards(DeckSize.FIFTY_TWO.baseRank()));
 
         dealer.shuffle(new SplitMix64(7));
         dealer.deal(turnOrder, turnOrder.get(0), Player::isGamer);
