@@ -15,15 +15,20 @@ Config:
 
   maxMovesPerRound: 10000
 
-  # Детерминированный RNG (Linear Congruential Generator)
+  # Детерминированный RNG (SplitMix64); состояние — одно 64-битное число,
+  # полностью сериализуемо (getState/setState), без рефлексии.
   rng:
-    seed: int
-    next():
-      seed = (1664525 * seed + 1013904223) mod 2^32
-      return seed
+    seed: long
+    nextBits(bits):
+      z = (state += 0x9E3779B97F4A7C15)
+      z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9
+      z = (z ^ (z >>> 27)) * 0x94D049BB133111EB
+      z = z ^ (z >>> 31)
+      return z >>> (64 - bits)
 
     nextInt(n):
-      return next() mod n
+      # rejection sampling, как в java.util.Random.nextInt(n) — без modulo-bias
+      return несмещённое значение в [0, n)
 
 
 # =========================
@@ -46,7 +51,7 @@ GameState:
   dealerIndex: int
   activePlayerIndices: List<int>   # исключает ELIMINATED
   deck: List<Card>                # играбельная колода (без scoreboard карт)
-  rngState: int
+  rngState: long
 
 RoundState:
   attackerIndex: int
