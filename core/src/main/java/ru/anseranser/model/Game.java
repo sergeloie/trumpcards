@@ -716,18 +716,20 @@ public class Game {
 
         /**
          * Capture the full game + driver state into a portable {@link SavedGame}
-         * (R10). The returned object is JSON-serializable via {@link SavedGame#toJson()}.
+         * (R10). Delegates to {@link SavedGameMapper} — the single place that
+         * knows the persisted layout (finding I3). The returned object is
+         * JSON-serializable via {@link SavedGame#toJson()}.
          */
         public SavedGame save() {
-            List<SavedGame.PlayerState> ps = new ArrayList<>();
-            for (Player p : Game.this.players) {
-                ps.add(new SavedGame.PlayerState(
-                        p.getTrump().name(),
-                        new ArrayList<>(p.getHand()),
-                        p.isGamer(),
-                        p.isHuman()));
-            }
-            SavedGame.DriverState ds = new SavedGame.DriverState(
+            return SavedGameMapper.toSaved(Game.this, this);
+        }
+
+        /**
+         * Snapshot this driver's flow state for {@link SavedGameMapper} (R10);
+         * the inverse of {@link #applyDriverState(SavedGame.DriverState)}.
+         */
+        SavedGame.DriverState toDriverState() {
+            return new SavedGame.DriverState(
                     phase.name(),
                     current != null ? current.getTrump().name() : null,
                     moves,
@@ -736,38 +738,24 @@ public class Game {
                     leadingNewTrick,
                     pendingAction != null ? pendingAction.name() : null,
                     forcedCard);
-        return new SavedGame(
-                1,
-                Game.this.deckSize,
-                ps,
-                Game.this.dealerSeat.getTrump().name(),
-                    new ArrayList<>(Game.this.pot),
-                    Game.this.scoreboard.snapshot(),
-                    new ArrayList<>(Game.this.dealer.deck()),
-                    Game.this.rng.getState(),
-                    Game.this.roundsPlayed,
-                    Game.this.cappedRounds,
-                    ds);
         }
 
         /** Restore the driver flow state from a {@link SavedGame.DriverState} (R10). */
-        void restore(SavedGame.DriverState ds) {
+        void applyDriverState(SavedGame.DriverState ds) {
             this.phase = Phase.valueOf(ds.phase());
-            this.current = ds.currentTrump() != null ? playerByTrump(ds.currentTrump()) : null;
+            this.current = ds.currentTrump() != null
+                    ? playerByTrump(Game.this, ds.currentTrump())
+                    : null;
             this.moves = ds.moves();
             this.asyncInput = ds.asyncInput();
             this.awaitingHuman = ds.awaitingHuman();
             this.leadingNewTrick = ds.leadingNewTrick();
-            this.pendingAction = ds.pendingAction() != null ? PendingHumanAction.valueOf(ds.pendingAction()) : null;
+            this.pendingAction = ds.pendingAction() != null
+                    ? PendingHumanAction.valueOf(ds.pendingAction())
+                    : null;
             this.forcedCard = ds.forcedCard();
         }
 
-        private Player playerByTrump(String trumpName) {
-            for (Player p : Game.this.players) {
-                if (p.getTrump().name().equals(trumpName)) return p;
-            }
-            throw new IllegalArgumentException("No player with trump " + trumpName);
-        }
     }
 
     /** Create a stepwise driver for this game (see {@link GameDriver}). */
@@ -786,31 +774,14 @@ public class Game {
      */
     public static GameDriver restore(SavedGame saved,
                                       java.util.function.Function<Card.Suit, DecisionStrategy> strategyFor) {
-        List<Player> players = new ArrayList<>();
-        for (SavedGame.PlayerState ps : saved.players()) {
-            Card.Suit trump = Card.Suit.valueOf(ps.trump());
-            Player p = new Player(trump, strategyFor.apply(trump));
-            p.setGamer(ps.gamer());
-            for (Card c : ps.hand()) p.addCard(c);
-            players.add(p);
-        }
-        Game g = new Game(players, saved.deckSize() != null ? saved.deckSize() : DeckSize.THIRTY_SIX);
-        g.dealerSeat = playerByTrump(g, saved.dealerSeatTrump());
-        g.scoreboard.restore(saved.scoreboard());
-        g.pot.clear();
-        g.pot.addAll(saved.pot());
-        g.dealer.deck().clear();
-        g.dealer.deck().addAll(saved.deckPool());
-        g.rng = new SplitMix64();
-        g.rng.setState(saved.rngSeed());
-        g.roundsPlayed = saved.roundsPlayed();
-        g.cappedRounds = saved.cappedRounds();
-        GameDriver d = g.createDriver();
-        d.restore(saved.driver());
-        return d;
+        return SavedGameMapper.restore(saved, strategyFor);
     }
 
-    private static Player playerByTrump(Game game, String trumpName) {
+    /**
+     * Resolve the seat whose trump is {@code trumpName}. Package-private because
+     * it is shared by {@link SavedGameMapper} and {@link GameDriver#applyDriverState}.
+     */
+    static Player playerByTrump(Game game, String trumpName) {
         for (Player p : game.players) {
             if (p.getTrump().name().equals(trumpName)) return p;
         }

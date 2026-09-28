@@ -62,6 +62,68 @@ class GameDriverAsyncTest {
     }
 
     @Test
+    void asyncSaveAndRestore_resumesThePausedHumanTurn() {
+        Game game = humanSpadesGame(42L);
+        Game.GameDriver d = game.createDriver();
+        d.setAsyncInput(true);
+        d.startGame();
+
+        int guard = 0;
+        while (!d.isAwaitingHumanInput() && !d.isGameOver()) {
+            if (!d.step()) {
+                d.finishRound();
+            }
+            if (++guard > 1_000_000) throw new AssertionError("no human turn reached");
+        }
+        assertTrue(d.isAwaitingHumanInput(), "the human seat must be asked to move");
+        Game.GameDriver.InputRequest before = d.pendingInput();
+
+        // Save while paused, round-trip through JSON, restore on a fresh engine.
+        SavedGame reloaded = SavedGame.fromJson(d.save().toJson());
+        Game.GameDriver resumed = Game.restore(reloaded, suit ->
+                suit == Card.Suit.SPADES
+                        ? new HumanDecisionStrategy(DUMMY)
+                        : new AiDecisionStrategy());
+
+        // The pause (awaiting + pending action + offered cards) must survive the round-trip.
+        assertTrue(resumed.isAwaitingHumanInput(), "restore must revive the paused human turn");
+        assertEquals(before.kind(), resumed.pendingInput().kind());
+        assertEquals(before.validCards(), resumed.pendingInput().validCards());
+
+        // Resume both with the same card and drive them to the end: they must match.
+        d.resume(before.validCards().get(0));
+        resumed.resume(before.validCards().get(0));
+        runToCompletion(d);
+        runToCompletion(resumed);
+
+        assertEquals(d.getGame().getWinner().getTrump(), resumed.getGame().getWinner().getTrump(),
+                "a game resumed from a paused save must finish like the original");
+        assertEquals(36, resumed.getGame().allCards().size(), "card conservation broken after resume");
+    }
+
+    private static Game humanSpadesGame(long seed) {
+        List<Player> players = List.of(
+                new Player(Card.Suit.SPADES, new HumanDecisionStrategy(DUMMY)),
+                new Player(Card.Suit.CLUBS),
+                new Player(Card.Suit.DIAMONDS),
+                new Player(Card.Suit.HEARTS));
+        Game game = new Game(players);
+        game.setRng(new SplitMix64(seed));
+        return game;
+    }
+
+    private static void runToCompletion(Game.GameDriver d) {
+        while (!d.isGameOver()) {
+            while (d.isAwaitingHumanInput()) {
+                d.resume(d.pendingInput().validCards().get(0));
+            }
+            if (!d.step()) {
+                d.finishRound();
+            }
+        }
+    }
+
+    @Test
     void resumeWithoutAwaitThrows() {
         Game game = new Game();
         Game.GameDriver d = game.createDriver();
