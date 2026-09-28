@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * <ul>
  *   <li>Equivalence — driving the game via {@code step()}/{@code finishRound()}
- *       yields the same winner as the synchronous {@code playGame(Random)}.</li>
+ *       yields the same winner as the synchronous {@code playGame(Rng)}.</li>
  *   <li>Phase flow — a round is ROUND_ACTIVE while stepping, flips to
  *       ROUND_ENDED at the end, and the game reaches GAME_ENDED exactly once.</li>
  *   <li>Single move per step — each {@code step()} performs exactly one move

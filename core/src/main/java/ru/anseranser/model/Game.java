@@ -446,7 +446,7 @@ public class Game {
     public enum Phase { INITIAL, ROUND_ACTIVE, ROUND_ENDED, GAME_ENDED }
 
     /**
-     * Stepwise driver for the game. Unlike {@link #playGame(Random)}, which runs
+     * Stepwise driver for the game. Unlike {@link #playGame(Rng)}, which runs
      * a whole game synchronously, this advances the game one move at a time so a
      * presentation layer (desktop / mobile UI) can render each emitted event,
      * animate, and pause between moves.
