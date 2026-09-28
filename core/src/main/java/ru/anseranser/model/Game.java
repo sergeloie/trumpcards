@@ -217,11 +217,18 @@ public class Game {
                 Card.Suit suit = card.suit();
                 if (suit == current.getTrump()) continue;
 
+                // A suit with no player at the table has no recipient: skip the
+                // transfer (the card stays with its holder) instead of passing it
+                // to a null owner. All standard compositions use one seat per suit,
+                // so this path is only reachable for custom player sets.
+                Player owner = ownerBySuit.get(suit);
+                if (owner == null) continue;
+
                 Card.Rank required = scoreboard.nextRequiredRank(suit);
                 if (required == null || required == Card.Rank.ACE) continue;
 
                 if (card.rank() == required) {
-                    transfers.add(new Transfer(current, card, ownerBySuit.get(suit)));
+                    transfers.add(new Transfer(current, card, owner));
                 }
             }
         }
@@ -257,13 +264,18 @@ public class Game {
      * Hard safety bound on a single round's move count. A normal round ends in a
      * few dozen moves; this guards against the pathological case where, under the
      * "taker stays in the round, drops out only on an empty hand" rule and with no
-     * draw pile, two players can pass the same trumps back and forth forever
-     * (proven by GameSimulator: e.g. seed 0 loops 2M+ moves). When the bound is
-     * hit we end the round and pick the player (still holding cards) with the
-     * most cards as the
-     * loser — the natural "last player with cards" outcome. This is a defensive
-     * guard, not a rules change: it never fires on a deal that would terminate
-     * normally.
+     * draw pile, two players can pass the same trumps back and forth forever.
+     * Such deals are rare: a scan of seeds 0..49999 found only four capped seeds —
+     * 12129, 24847, 30649 and 49128 (each caps exactly one round). Seed 0 is NOT
+     * pathological any more (it terminates in ~31 rounds); the old "seed 0 loops
+     * 2M+ moves" note is obsolete. When the bound is hit we end the round and pick
+     * the player (still holding cards) with the most cards as the loser — the
+     * natural "last player with cards" outcome. This is a defensive guard, not a
+     * rules change: it never fires on a deal that would terminate normally.
+     *
+     * <p>The capped seeds above are used by the determinism tests
+     * ({@code ReplayDeterminismTest}, {@code RoundLevelSimulatorTest}) to prove a
+     * capped round is still reproducible.
      */
     private static final int MAX_ROUND_MOVES = 10_000;
 

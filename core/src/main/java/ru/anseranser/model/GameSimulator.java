@@ -1,5 +1,7 @@
 package ru.anseranser.model;
 
+import ru.anseranser.event.GameEvent;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -21,11 +23,14 @@ import java.util.Set;
  *   <li><b>Determinism</b> — replaying the same seed yields the same winner.</li>
  * </ul>
  *
- * <p>The {@link Result} now also reports how many of the simulated games actually
- * hit the safety cap ({@link #cappedGames}), so the suite can surface — rather
- * than hide — the pathological non-terminating deals (e.g. seed 0) that the cap
- * catches. A green "invariants hold" run with a non-zero {@code cappedGames}
- * count is an honest signal, not a blind pass.
+ * <p>The {@link Result} also reports how many of the simulated games actually
+ * hit the safety cap ({@link #countCapped}), so the suite can surface — rather
+ * than hide — the pathological non-terminating deals that the cap catches.</p>
+ *
+ * <p>{@link #replay(int)} additionally captures the <em>whole path</em> of a
+ * game: a {@link RoundSnapshot} per round (loser, pushed card, elimination flag,
+ * move count). Two independent replays of the same seed must produce identical
+ * paths — this is the round-level determinism guarantee (golden/replay tests).</p>
  */
 public class GameSimulator {
 
@@ -67,6 +72,20 @@ public class GameSimulator {
         }
     }
 
+    /**
+     * The outcome of a single round within a replayed game.
+     *
+     * @param round      1-based round index
+     * @param loser      the round's loser (their trump suit)
+     * @param pushed     the card pushed onto the loser's scoreboard ({@code null} if none)
+     * @param eliminated whether the push completed the ladder and eliminated the loser
+     * @param moves      how many moves (lead/beat/take) the round took
+     */
+    public record RoundSnapshot(int round, Card.Suit loser, Card pushed, boolean eliminated, int moves) {}
+
+    /** A full replay of one seed: the final {@link Result} plus every round's {@link RoundSnapshot}. */
+    public record Replay(Result result, List<RoundSnapshot> rounds) {}
+
     public List<Result> run() {
         List<Result> results = new ArrayList<>();
         for (int i = 0; i < games; i++) {
@@ -86,15 +105,45 @@ public class GameSimulator {
     }
 
     private Result runOne(int seed) {
+        Game game = new Game(createPlayers(), deckSize);
+        game.playGame(new SplitMix64(seed));
+        return resultOf(seed, game);
+    }
+
+    /**
+     * Run one seed and capture both the final result and the per-round path.
+     * Two calls with the same seed must return equal {@code Replay}s.
+     */
+    public Replay replay(int seed) {
+        Game game = new Game(createPlayers(), deckSize);
+        List<RoundSnapshot> rounds = new ArrayList<>();
+        int[] moves = {0};
+        game.setListener(event -> {
+            if (event instanceof GameEvent.CardPlayed
+                    || event instanceof GameEvent.CardBeaten
+                    || event instanceof GameEvent.PotTaken) {
+                moves[0]++;
+            } else if (event instanceof GameEvent.RoundEnded e) {
+                rounds.add(new RoundSnapshot(rounds.size() + 1, e.loser(),
+                        e.pushedToScoreboard(), e.eliminated(), moves[0]));
+                moves[0] = 0;
+            }
+        });
+        game.playGame(new SplitMix64(seed));
+        return new Replay(resultOf(seed, game), List.copyOf(rounds));
+    }
+
+    private List<Player> createPlayers() {
         List<Player> players = new ArrayList<>();
         for (Card.Suit suit : Card.Suit.values()) {
             DecisionStrategy s = (humanStrategy != null && suit == Card.Suit.SPADES)
                     ? humanStrategy : new AiDecisionStrategy();
             players.add(new Player(suit, s));
         }
-        Game game = new Game(players, deckSize);
-        game.playGame(new SplitMix64(seed));
+        return players;
+    }
 
+    private Result resultOf(int seed, Game game) {
         List<Card> allCards = game.allCards();
         int totalCards = allCards.size();
         Set<Card> seen = new HashSet<>(allCards);

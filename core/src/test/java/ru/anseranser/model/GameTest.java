@@ -157,6 +157,44 @@ class GameTest {
     }
 
     @Test
+    void distributeObligatoryCards_incompletePlayerSet_skipsUnownedSuits() {
+        // Two-seat game (SPADES + HEARTS): CLUBS and DIAMONDS have no owner at the table.
+        Card clubsSeven = new Card(Card.Suit.CLUBS, Card.Rank.SEVEN);
+        Card heartsSeven = new Card(Card.Suit.HEARTS, Card.Rank.SEVEN);
+        Card spadesSeven = new Card(Card.Suit.SPADES, Card.Rank.SEVEN);
+
+        Map<Card.Suit, List<Card>> layout = ScriptedCardDealer.builder(DeckSize.THIRTY_SIX)
+                .give(Card.Suit.SPADES, clubsSeven, heartsSeven) // CLUBS unowned, HEARTS owned
+                .give(Card.Suit.HEARTS, spadesSeven)
+                .fillOrder(Card.Suit.SPADES, Card.Suit.HEARTS)
+                .build();
+
+        List<Player> players = List.of(
+                new Player(Card.Suit.SPADES),
+                new Player(Card.Suit.HEARTS));
+        Game game = new Game(players, DeckSize.THIRTY_SIX);
+        game.setCardDealer(new ScriptedCardDealer(DeckSize.THIRTY_SIX, layout));
+
+        game.shuffleAndDeal();
+        // Used to throw NullPointerException: the CLUBS SEVEN had no recipient.
+        assertDoesNotThrow(game::distributeObligatoryCards);
+
+        Player spades = players.get(0);
+        Player hearts = players.get(1);
+
+        assertTrue(spades.getHand().contains(spadesSeven), "SPADES SEVEN must reach its owner");
+        assertTrue(hearts.getHand().contains(heartsSeven), "HEARTS SEVEN must reach its owner");
+        assertTrue(spades.getHand().contains(clubsSeven),
+                "CLUBS has no owner at the table, so its SEVEN must stay with its holder");
+
+        int total = 0;
+        for (Player p : players) {
+            total += p.getHand().size();
+        }
+        assertEquals(32, total, "Cards must be conserved through the exchange");
+    }
+
+    @Test
     void determinism_differentSeed_canDiffer() {
         Game g1 = new Game();
         Game g2 = new Game();
