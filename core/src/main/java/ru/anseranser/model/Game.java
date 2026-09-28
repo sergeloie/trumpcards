@@ -597,23 +597,28 @@ public class Game {
             }
         }
 
-        /** Drive one human decision point. @return true if the human's whole turn is done. */
+        /**
+         * Drive one human decision point. The lead/defend/take-pot rule itself is
+         * owned by {@link Player#nextActionKind(List, boolean)} (single source of
+         * truth, finding C1): this method only turns that decision into a pause
+         * (awaiting {@link #resume(Card)}) or an applied action. Both the async
+         * path and the blocking {@link #step()} path therefore evaluate moves
+         * through the exact same {@link Player} code.
+         *
+         * @return true if the human's whole turn is done
+         */
         private boolean humanTurn() {
             if (pendingAction == null) {
-                // Decide what the human must do next.
-                if (pot.isEmpty() || leadingNewTrick) {
-                    pendingAction = PendingHumanAction.LEAD;
-                } else {
-                    Card top = pot.get(pot.size() - 1);
-                    if (current.validDefenses(top).isEmpty()) {
-                        // No legal defense: the only option is to take the pot (no choice).
-                        emit(current.takePot(top, pot), current);
-                        leadingNewTrick = false;
-                        pendingAction = null;
-                        return true;
-                    }
-                    pendingAction = PendingHumanAction.DEFEND;
+                Player.ActionKind kind = current.nextActionKind(pot, leadingNewTrick);
+                if (kind == Player.ActionKind.TAKE_POT) {
+                    // No legal defense: taking the pot is not a choice, so never pause.
+                    emit(current.applyTakePot(pot), current);
+                    leadingNewTrick = false;
+                    return true;
                 }
+                pendingAction = kind == Player.ActionKind.LEAD
+                        ? PendingHumanAction.LEAD
+                        : PendingHumanAction.DEFEND;
                 listener.onEvent(new GameEvent.AwaitingHumanInput(current.getTrump()));
                 awaitingHuman = true;
                 return false;
@@ -623,19 +628,18 @@ public class Game {
             pendingAction = null;
             awaitingHuman = false;
             if (action == PendingHumanAction.LEAD) {
-                emit(current.playLeadCard(pot, forcedCard), current);
+                emit(current.applyLead(pot, forcedCard), current);
                 leadingNewTrick = false;
                 return true; // a lead ends the turn
-            } else { // DEFEND
-                Card top = pot.get(pot.size() - 1);
-                emit(current.beatCard(top, forcedCard, pot), current);
-                if (current.getHand().isEmpty()) {
-                    return true; // the beat emptied the hand: turn is over, no follow-up lead
-                }
-                leadingNewTrick = true; // after beating, the same player leads a new trick
-                forcedCard = null;
-                return humanTurn(); // loop: the follow-up lead will yield again
             }
+            // DEFEND
+            emit(current.applyDefense(pot, forcedCard), current);
+            if (current.getHand().isEmpty()) {
+                return true; // the beat emptied the hand: turn is over, no follow-up lead
+            }
+            leadingNewTrick = true; // after beating, the same player leads a new trick
+            forcedCard = null;
+            return humanTurn(); // loop: the follow-up lead will yield again
         }
 
         private void advanceAfterTurn() {
