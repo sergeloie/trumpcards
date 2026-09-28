@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Orchestrates a full game: deals rounds, runs moves, determines the loser of
@@ -241,21 +242,30 @@ public class Game {
 
     // ---------- Round helpers ----------
 
-    /** Players still in the round: active gamers holding at least one card. */
-    private int countActiveGamersWithCards() {
-        int count = 0;
+    /**
+     * The single walk over the seating order (finding I1): every "which players
+     * …" query is expressed as a filter over this one pass, so the per-round
+     * loops cannot drift apart in what they visit or in what order.
+     */
+    private List<Player> playersWhere(Predicate<Player> predicate) {
+        List<Player> result = new ArrayList<>();
         for (Player p : players) {
-            if (p.isGamer() && !p.getHand().isEmpty()) count++;
+            if (predicate.test(p)) result.add(p);
         }
-        return count;
+        return result;
+    }
+
+    /** Players still in the round: active gamers holding at least one card, in seating order. */
+    private List<Player> activeGamersWithCards() {
+        return playersWhere(p -> p.isGamer() && !p.getHand().isEmpty());
+    }
+
+    private int countActiveGamersWithCards() {
+        return activeGamersWithCards().size();
     }
 
     private int countActiveGamers() {
-        int count = 0;
-        for (Player p : players) {
-            if (p.isGamer()) count++;
-        }
-        return count;
+        return playersWhere(Player::isGamer).size();
     }
 
     // ---------- Round ----------
@@ -291,34 +301,18 @@ public class Game {
     }
 
     /**
-        for (Player p : players) {
-            if (p.isGamer() && !p.getHand().isEmpty()) {
-                return p;
-            }
-        }
-        return null;
-    }
-
-    /** Fallback loser for a capped (non-terminating) round: most cards in hand. */
+     * Fallback loser for a capped (non-terminating) round: most cards in hand.
+     * On a tie the first by seating order wins, matching the previous strict
+     * {@code >} scan (see {@code rules.md} §8 tie-break note in the review).
+     */
     private Player mostCardsRounder() {
-        Player best = null;
-        for (Player p : players) {
-            if (p.isGamer() && !p.getHand().isEmpty()) {
-                if (best == null || p.getHand().size() > best.getHand().size()) {
-                    best = p;
-                }
-            }
-        }
-        return best;
+        return activeGamersWithCards().stream()
+                .max(Comparator.comparingInt((Player p) -> p.getHand().size()))
+                .orElse(null);
     }
 
     private Player determineLoser() {
-        for (Player p : players) {
-            if (p.isGamer() && !p.getHand().isEmpty()) {
-                return p;
-            }
-        }
-        return null;
+        return activeGamersWithCards().stream().findFirst().orElse(null);
     }
 
     private Player nextDealer(Player from) {
