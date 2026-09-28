@@ -23,7 +23,8 @@ class GameSerializationTest {
     private static final int SAVE_AFTER_STEPS = 15;
 
     private static int totalCards(Game game) {
-        return game.allCards().size() + game.getPot().size();
+        // allCards() already includes the pot (I7).
+        return game.allCards().size();
     }
 
     @Test

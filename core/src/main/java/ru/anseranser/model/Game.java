@@ -408,12 +408,17 @@ public class Game {
         return GameState.of(this);
     }
 
-    /** All cards still in play: every hand, every scoreboard stack, and the dealer's deck pool. */
+    /**
+     * All cards still in play: every hand, the current pot, every scoreboard
+     * stack, and the dealer's deck pool. Between rounds the pot is empty, so at
+     * the end of a game the four sources always add up to a full deck.
+     */
     public List<Card> allCards() {
         List<Card> all = new ArrayList<>();
         for (Player p : players) {
             all.addAll(p.getHand());
         }
+        all.addAll(pot);
         for (List<Card> stack : scoreboard.snapshot().values()) {
             all.addAll(stack);
         }

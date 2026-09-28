@@ -57,6 +57,19 @@ class GameTest {
     }
 
     @Test
+    void allCards_includesThePotDuringARound() {
+        Game game = new Game();
+        game.setRng(new SplitMix64(42));
+        Game.GameDriver d = game.createDriver();
+        d.startGame();
+        d.step(); // the first player leads, so the pot is no longer empty
+
+        assertFalse(game.getPot().isEmpty(), "the lead should have put a card in the pot");
+        assertEquals(36, game.allCards().size(),
+                "allCards() must count hands + pot + scoreboard + deck (I7)");
+    }
+
+    @Test
     void distributeObligatoryCards_sevenOfEachSuitTransferred() {
         Game game = new Game();
         game.shuffleAndDeal();
