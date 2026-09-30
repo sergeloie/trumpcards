@@ -260,10 +260,9 @@ ROUND_END:
       maxCards = max(hand.size)
       candidates = players with that size
 
-      if len(candidates) == 1:
-        loser = candidates[0]
-      else:
-        loser = candidates[rng.nextInt(len(candidates))]
+      # deterministic tie-break: first by seating order (rules.md §8),
+      # kept reproducible-by-seed instead of random
+      loser = candidates[0]
 
     # COLLECT ALL CARDS
     deck = pile + all players hands
