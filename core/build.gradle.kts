@@ -6,7 +6,10 @@ plugins {
 
 dependencies {
     implementation(libs.gson)
-    implementation(libs.lombok)
+    // Lombok is a compile-time-only annotation processor: its classes must never
+    // reach the runtime classpath (R8 in full mode would choke on the missing
+    // lombok.javac.handlers.* references pulled in through ServiceLoader analysis).
+    compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
 
     testImplementation(libs.junit.jupiter)
