@@ -189,6 +189,26 @@ public class Game {
         this.cappedRounds = cappedRounds;
     }
 
+    // ---------- Driver state access (I4c) ----------
+    // GameDriver is an inner class and could reach straight into the fields
+    // above; instead it goes through these named, package-private accessors so
+    // the coupling between the driver and the game is explicit and greppable.
+
+    /** The live, mutable pot. The driver applies moves straight against it. */
+    List<Card> pot() {
+        return pot;
+    }
+
+    /** Count one more round played (driver round bookkeeping). */
+    void incrementRoundsPlayed() {
+        roundsPlayed++;
+    }
+
+    /** Count one more capped (move-limited) round (driver round bookkeeping). */
+    void incrementCappedRounds() {
+        cappedRounds++;
+    }
+
     // ---------- Setup / dealing ----------
 
     public void shuffleAndDeal() {
@@ -452,15 +472,15 @@ public class Game {
         /** Start the game: emit GameStarted and set up the first round. */
         public void startGame() {
             chooseFirstDealer();
-            listener.onEvent(new GameEvent.GameStarted());
+            getListener().onEvent(new GameEvent.GameStarted());
             beginRound();
         }
 
         private void beginRound() {
             setupRound();
-            current = dealerSeat;
+            current = dealerSeat();
             moves = 0;
-            roundsPlayed++;
+            incrementRoundsPlayed();
             phase = Phase.ROUND_ACTIVE;
             awaitingHuman = false;
             leadingNewTrick = false;
@@ -497,7 +517,8 @@ public class Game {
                 return new InputRequest(current.getTrump(), InputRequest.Kind.LEAD,
                         new ArrayList<>(current.getHand()));
             }
-            Card top = pot.get(pot.size() - 1);
+            List<Card> livePot = pot();
+            Card top = livePot.get(livePot.size() - 1);
             return new InputRequest(current.getTrump(), InputRequest.Kind.DEFEND,
                     current.validDefenses(top));
         }
@@ -527,9 +548,9 @@ public class Game {
                 return !isRoundOver();
             }
             if (current.isHuman()) {
-                listener.onEvent(new GameEvent.AwaitingHumanInput(current.getTrump()));
+                getListener().onEvent(new GameEvent.AwaitingHumanInput(current.getTrump()));
             }
-            for (Player.MoveAction action : current.makeMove(pot)) {
+            for (Player.MoveAction action : current.makeMove(pot())) {
                 emit(action, current);
             }
             advanceAfterTurn();
@@ -571,17 +592,17 @@ public class Game {
          */
         private boolean humanTurn() {
             if (pendingAction == null) {
-                Player.ActionKind kind = current.nextActionKind(pot, leadingNewTrick);
+                Player.ActionKind kind = current.nextActionKind(pot(), leadingNewTrick);
                 if (kind == Player.ActionKind.TAKE_POT) {
                     // No legal defense: taking the pot is not a choice, so never pause.
-                    emit(current.applyTakePot(pot), current);
+                    emit(current.applyTakePot(pot()), current);
                     leadingNewTrick = false;
                     return true;
                 }
                 pendingAction = kind == Player.ActionKind.LEAD
                         ? PendingHumanAction.LEAD
                         : PendingHumanAction.DEFEND;
-                listener.onEvent(new GameEvent.AwaitingHumanInput(current.getTrump()));
+                getListener().onEvent(new GameEvent.AwaitingHumanInput(current.getTrump()));
                 awaitingHuman = true;
                 return false;
             }
@@ -590,12 +611,12 @@ public class Game {
             pendingAction = null;
             awaitingHuman = false;
             if (action == PendingHumanAction.LEAD) {
-                emit(current.applyLead(pot, forcedCard), current);
+                emit(current.applyLead(pot(), forcedCard), current);
                 leadingNewTrick = false;
                 return true; // a lead ends the turn
             }
             // DEFEND
-            emit(current.applyDefense(pot, forcedCard), current);
+            emit(current.applyDefense(pot(), forcedCard), current);
             if (current.getHand().isEmpty()) {
                 return true; // the beat emptied the hand: turn is over, no follow-up lead
             }
@@ -605,9 +626,9 @@ public class Game {
         }
 
         private void advanceAfterTurn() {
-            current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
+            current = getPlayers().nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
             moves++;
-            if (RoundResolver.countActiveWithCards(players) <= 1 || moves >= MAX_ROUND_MOVES) {
+            if (RoundResolver.countActiveWithCards(getPlayers()) <= 1 || moves >= MAX_ROUND_MOVES) {
                 phase = Phase.ROUND_ENDED;
             }
         }
@@ -622,11 +643,11 @@ public class Game {
         /** Translate a domain {@link Player.MoveAction} into the matching event. */
         private void emit(Player.MoveAction action, Player actor) {
             if (action instanceof Player.MoveAction.Led e) {
-                listener.onEvent(new GameEvent.CardPlayed(actor.getTrump(), e.card()));
+                getListener().onEvent(new GameEvent.CardPlayed(actor.getTrump(), e.card()));
             } else if (action instanceof Player.MoveAction.Beat e) {
-                listener.onEvent(new GameEvent.CardBeaten(actor.getTrump(), e.attacking(), e.beating()));
+                getListener().onEvent(new GameEvent.CardBeaten(actor.getTrump(), e.attacking(), e.beating()));
             } else if (action instanceof Player.MoveAction.TookPot e) {
-                listener.onEvent(new GameEvent.PotTaken(actor.getTrump(), e.topCard(), e.potSize()));
+                getListener().onEvent(new GameEvent.PotTaken(actor.getTrump(), e.topCard(), e.potSize()));
             }
         }
 
@@ -646,9 +667,9 @@ public class Game {
                 loser.setGamer(false);
             }
 
-            dealerSeat = advanceDealer(loser);
+            setDealerSeat(advanceDealer(loser));
 
-            if (RoundResolver.countActive(players) > 1) {
+            if (RoundResolver.countActive(getPlayers()) > 1) {
                 beginRound();
             } else {
                 endGame();
@@ -661,11 +682,11 @@ public class Game {
          * otherwise the player still holding cards on the normal exit path.
          */
         private Player resolveLoser() {
-            if (moves >= MAX_ROUND_MOVES && RoundResolver.countActiveWithCards(players) > 1) {
-                cappedRounds++;
-                return RoundResolver.mostCards(players);
+            if (moves >= MAX_ROUND_MOVES && RoundResolver.countActiveWithCards(getPlayers()) > 1) {
+                incrementCappedRounds();
+                return RoundResolver.mostCards(getPlayers());
             }
-            return RoundResolver.firstWithCards(players);
+            return RoundResolver.firstWithCards(getPlayers());
         }
 
         /**
@@ -680,12 +701,12 @@ public class Game {
         /** Finish the game: only one active gamer remains. */
         private void endGame() {
             phase = Phase.GAME_ENDED;
-            listener.onEvent(new GameEvent.GameEnded(getWinner().getTrump()));
+            getListener().onEvent(new GameEvent.GameEnded(getWinner().getTrump()));
         }
 
         public boolean isGameOver() { return phase == Phase.GAME_ENDED; }
 
-        public List<Card> getPot() { return new ArrayList<>(pot); }
+        public List<Card> getPot() { return new ArrayList<>(pot()); }
 
         /** The owning {@link Game}, for callers that need the winner after a resumed game ends. */
         public Game getGame() { return Game.this; }

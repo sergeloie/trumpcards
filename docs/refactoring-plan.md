@@ -50,7 +50,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 | I5 | `HashMap` в `distributeObligatoryCards`/`snapshotHands` | — | S | низкий — ✅ выполнено |
 | I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий — ✅ выполнено |
 | I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий — ✅ выполнено |
-| I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний |
+| I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний — ✅ выполнено (вариант A) |
 | D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний |
 | C3 | `endRound()` vs `nextRequiredRank` | — | — | **вне рамок** (решение заказчика) |
 | §8 | случайный тай-брейк при лимите ходов | — | — | **вне рамок** (решение заказчика) |
@@ -149,7 +149,7 @@ god-class; приоритет низкий, можно отложить. Есл�
 
 ---
 
-## Шаг 4 — I4c: ограничить связность `GameDriver` (M, риск средний)
+## Шаг 4 — I4c: ограничить связность `GameDriver` (M, риск средний) — ✅ выполнено (A)
 
 **Где:** `Game.GameDriver` напрямую читает/пишет приватные поля `Game.this`
 (`pot`, `dealer`, `scoreboard`, `rng`, `players`, `dealerSeat`, `roundsPlayed`,
@@ -177,6 +177,13 @@ golden/replay-тесты обязаны остаться зелёными.
 `:console:compileJava :desktop-libgdx:compileJava` (для B — ещё `:android`).
 
 **Коммит:** `route GameDriver state access through Game accessors` (A).
+
+**Факт:** выполнен **вариант A**. Добавлены пакетно-приватные `pot()`,
+`incrementRoundsPlayed()`, `incrementCappedRounds()`; для остального использованы уже
+существующие `dealerSeat()`/`setDealerSeat()`, `getPlayers()`, `getListener()`.
+`GameDriver` больше не обращается к полям `Game.this` напрямую. Публичный API не
+менялся, тип `Game.GameDriver` сохранён (вариант B не делался). `:core:test` — 85
+зелёных, `console`/`desktop-libgdx` компилируются.
 
 ---
 
@@ -250,7 +257,7 @@ desktop, android — console тривиален).
 |---|---|---|---|
 | 1 | `use EnumMap for suit-keyed game maps` | I5 | S |
 | 2 | `split finishRound into named steps` | I4a | S | ✅ |
-| 3 | `route GameDriver state access through Game accessors` | I4c-A | M |
+| 3 | `route GameDriver state access through Game accessors` | I4c-A | M | ✅ |
 | 4 | `pass the human seat from the composition root` | D2 | M |
 | 5 | `extract round player queries into RoundResolver` | I4b | S | ✅ |
 

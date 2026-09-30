@@ -195,9 +195,12 @@
 - **Категория:** связность, нечитаемость.
 - **Серьёзность:** **Важно.**
 - **Оценка:** L.
-- **Статус:** частично — I4a ✅ (`finishRound()` разложен на `resolveLoser()`/`advanceDealer()`/`endGame()`,
-  порядок вызовов не менялся) и I4b ✅ (обходы игроков вынесены в пакетно-приватный
-  `RoundResolver`); остаётся I4c (связность `GameDriver`). План — `docs/refactoring-plan.md`.
+- **Статус:** закрыто по существу — I4a ✅ (`finishRound()` разложен на
+  `resolveLoser()`/`advanceDealer()`/`endGame()`), I4b ✅ (обходы игроков вынесены в
+  пакетно-приватный `RoundResolver`) и I4c ✅ (вариант A: `GameDriver` ходит в состояние
+  `Game` через именованные пакетно-приватные аксессоры, а не через поля; публичный тип
+  `Game.GameDriver` сохранён). Вариант B (top-level `GameDriver`) — только по согласованию.
+  План — `docs/refactoring-plan.md`.
 
 ### I5 — `ownerBySuit`/`snapshotHands` на `java.util.HashMap` (аудит недетерминизма)
 
@@ -362,7 +365,7 @@
 | 5 | **I1** — 4 похожих обхода игроков | ✅ сведены к одному параметризованному обходу (`Game.playersWhere`) | S |
 | 6 | **I2** — двойной `playerByTrump` | ✅ оставлен один статический метод | S |
 | 7 | **I3** — сериализация в 3 местах | ✅ сведена в `SavedGameMapper` | M |
-| 8 | **I4** — god-class `Game` / inner `GameDriver` | I4a ✅ (`finishRound()` разложен) и I4b ✅ (`RoundResolver`); остаётся связность `GameDriver` (I4c) | L |
+| 8 | **I4** — god-class `Game` / inner `GameDriver` | I4a ✅ (`finishRound()` разложен), I4b ✅ (`RoundResolver`), I4c-A ✅ (состояние `GameDriver` через аксессоры); вариант B — по согласованию | L |
 | 9 | **I5** — `HashMap` в `distributeObligatoryCards`/`snapshotHands` | ✅ `EnumMap` | S |
 | 10 | **I6** — неиспользуемая `guava` | ✅ удалена из `core` и version catalog | S |
 | 11 | **I7** — `allCards()` без банка | ✅ `pot` включён в `allCards()` | S |
