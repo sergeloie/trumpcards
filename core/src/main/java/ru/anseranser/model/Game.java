@@ -9,6 +9,7 @@ import ru.anseranser.event.NopListener;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -206,7 +207,7 @@ public class Game {
     private record Transfer(Player from, Card card, Player to) {}
 
     public void distributeObligatoryCards() {
-        Map<Card.Suit, Player> ownerBySuit = new java.util.HashMap<>();
+        Map<Card.Suit, Player> ownerBySuit = new EnumMap<>(Card.Suit.class);
         for (Player p : players) {
             ownerBySuit.put(p.getTrump(), p);
         }
@@ -433,7 +434,7 @@ public class Game {
     }
 
     private Map<Card.Suit, List<Card>> snapshotHands() {
-        Map<Card.Suit, List<Card>> hands = new java.util.HashMap<>();
+        Map<Card.Suit, List<Card>> hands = new EnumMap<>(Card.Suit.class);
         for (Player p : players) {
             hands.put(p.getTrump(), new ArrayList<>(p.getHand()));
         }

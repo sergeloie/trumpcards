@@ -208,6 +208,8 @@
 - **Категория:** аудит недетерминизма / читаемость.
 - **Серьёзность:** **Важно.**
 - **Оценка:** S.
+- **Статус:** ✅ исправлено — `ownerBySuit` и `snapshotHands` переведены на `EnumMap`
+  (`new EnumMap<>(Card.Suit.class)`), поведение не изменилось.
 
 ### I6 — Неиспользуемая зависимость `guava` в `core`
 
@@ -358,7 +360,7 @@
 | 6 | **I2** — двойной `playerByTrump` | ✅ оставлен один статический метод | S |
 | 7 | **I3** — сериализация в 3 местах | ✅ сведена в `SavedGameMapper` | M |
 | 8 | **I4** — god-class `Game` / inner `GameDriver` | Вынести `RoundResolver`; ограничить связность `GameDriver` (`SavedGameMapper` уже вынесен — I3) | L |
-| 9 | **I5** — `HashMap` в `distributeObligatoryCards`/`snapshotHands` | `EnumMap`; подтвердить в аудите | S |
+| 9 | **I5** — `HashMap` в `distributeObligatoryCards`/`snapshotHands` | ✅ `EnumMap` | S |
 | 10 | **I6** — неиспользуемая `guava` | ✅ удалена из `core` и version catalog | S |
 | 11 | **I7** — `allCards()` без банка | ✅ `pot` включён в `allCards()` | S |
 | 12 | **I8** — пробелы в покрытии | Задания 2–3: `ScriptedCardDealer`, golden-тесты, round-level симулятор | L |
@@ -394,5 +396,6 @@
 Игровая логика изолирована в `core`; UI-порты правил не дублируют; контракт R7 не нарушен.
 Главные риски — **дублирование правила хода (C1/I9)** и **повреждённый участок `Game.java` (C2)**,
 которые делают текущий код хрупким для следующих правок; плюс **неявное допущение в `endRound()` (C3)**
-и **живая колода `Dealer.deck()` (C4)**. Бэклог из §5 ложится в основу `docs/refactoring-plan.md`
-(Задание 4).
+и **живая колода `Dealer.deck()` (C4)**. Бэклог из §5 лёг в основу `docs/refactoring-plan.md`
+(Задание 4); из него уже закрыты C1/C2/C4/I1/I2/I3/I6/I7/I8/I9/D1/D3/D4, а оставшийся объём
+(I4, I5, D2) и вынесенные за рамки C3 и `rules.md` §8 разобраны в плане.
