@@ -19,10 +19,18 @@ import java.util.List;
  * thread. The engine runs on a dedicated background thread and fires events from
  * there, so we capture the {@link GameState} on the engine thread (where the model is
  * consistent) and hand the copy to the render thread via {@code Gdx.app.postRunnable}.</p>
+ *
+ * <p>The human seat (finding D2) is supplied by the composition root
+ * ({@link DesktopLauncher}) rather than assumed here, so the view stays free of
+ * the "SPADES is the human" convention.</p>
  */
-record GameSnapshot(GameState state, String status, List<String> logLines) {
+record GameSnapshot(GameState state, Card.Suit humanSeat, String status, List<String> logLines) {
 
-    /** Where an opponent sits relative to the human (SPADES, bottom). */
+    GameSnapshot {
+        java.util.Objects.requireNonNull(humanSeat, "humanSeat");
+    }
+
+    /** Where an opponent sits relative to the human (bottom). */
     enum Seat {
         LEFT, TOP, RIGHT
     }
@@ -30,10 +38,15 @@ record GameSnapshot(GameState state, String status, List<String> logLines) {
     /** One opponent's summary for the side panels. */
     record OpponentView(Seat seat, Card.Suit trump, int cardCount) {}
 
-    /** Capture a consistent snapshot of {@code game} on the calling (engine) thread. */
-    static GameSnapshot capture(Game game, List<String> log) {
+    /**
+     * Capture a consistent snapshot of {@code game} on the calling (engine) thread.
+     *
+     * @param humanSeat the seat the composition root wired to the human; the view
+     *                  uses it to tell the human's hand and seat from the opponents'
+     */
+    static GameSnapshot capture(Game game, Card.Suit humanSeat, List<String> log) {
         String status = "Trump: " + game.getTrump() + "   Players left: " + countGamers(game);
-        return new GameSnapshot(GameState.of(game), status, new ArrayList<>(log));
+        return new GameSnapshot(GameState.of(game), humanSeat, status, new ArrayList<>(log));
     }
 
     // --- Accessors used by GameScreen (delegating to the immutable GameState) ---
@@ -43,16 +56,16 @@ record GameSnapshot(GameState state, String status, List<String> logLines) {
     List<Card> pot() { return state.pot(); }
 
     /**
-     * Opponents (every gamer except the human seat SPADES), in turn order. They
-     * are placed LEFT, TOP, RIGHT in that order — matching the clockwise seating
-     * around the human (SPADES) at the bottom.
+     * Opponents (every gamer except the human seat), in turn order. They are
+     * placed LEFT, TOP, RIGHT in that order — matching the clockwise seating
+     * around the human at the bottom.
      */
     List<OpponentView> opponents() {
         Seat[] seats = {Seat.LEFT, Seat.TOP, Seat.RIGHT};
         List<OpponentView> result = new ArrayList<>();
         int i = 0;
         for (GameState.PlayerState p : state.players()) {
-            if (p.gamer() && p.trump() != Card.Suit.SPADES) {
+            if (p.gamer() && p.trump() != humanSeat) {
                 result.add(new OpponentView(seats[i % seats.length], p.trump(), p.hand().size()));
                 i++;
             }
@@ -63,7 +76,7 @@ record GameSnapshot(GameState state, String status, List<String> logLines) {
     List<Card> humanHand() {
         List<Card> humanHand = new ArrayList<>();
         for (GameState.PlayerState p : state.players()) {
-            if (p.trump() == Card.Suit.SPADES && p.gamer()) {
+            if (p.trump() == humanSeat && p.gamer()) {
                 humanHand.addAll(p.hand());
                 break;
             }

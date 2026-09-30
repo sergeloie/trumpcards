@@ -38,6 +38,13 @@ public class DesktopLauncher extends ApplicationAdapter {
 
     private static final float AI_PAUSE_MS = 450f;
 
+    /**
+     * The seat the human plays (finding D2). Decided once here, in the
+     * composition root (R6), and passed down to the listener/snapshot/screen so
+     * the presentation layer never assumes a particular suit is the human.
+     */
+    static final Card.Suit HUMAN_SEAT = Card.Suit.SPADES;
+
     private Stage stage;
     private Skin skin;
     private GameScreen screen;
@@ -93,16 +100,16 @@ public class DesktopLauncher extends ApplicationAdapter {
 
     /** Build the game for the chosen deck size and start the engine thread. */
     private void startGameWith(DeckSize deckSize) {
-        // Composition root: SPADES seat is human (mouse-driven), the rest are AI.
+        // Composition root: the HUMAN_SEAT player is mouse-driven, the rest are AI.
         List<Player> players = new ArrayList<>();
         for (Card.Suit suit : Card.Suit.values()) {
-            DecisionStrategy strategy = (suit == Card.Suit.SPADES)
+            DecisionStrategy strategy = (suit == HUMAN_SEAT)
                     ? new HumanDecisionStrategy(input)
                     : new AiDecisionStrategy();
             players.add(new Player(suit, strategy));
         }
         game = new Game(players, deckSize);
-        listener = new DesktopGameListener(game, screen);
+        listener = new DesktopGameListener(game, screen, HUMAN_SEAT);
         // Repaint when the human's valid choices become known (no engine event
         // is fired for "your turn"), so playable cards get highlighted.
         input.setRepaintHook(() -> listener.requestRepaint());

@@ -51,7 +51,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 | I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий — ✅ выполнено |
 | I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий — ✅ выполнено |
 | I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний — ✅ выполнено (вариант A) |
-| D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний |
+| D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний — desktop ✅, android осталось |
 | C3 | `endRound()` vs `nextRequiredRank` | — | — | **вне рамок** (решение заказчика) |
 | §8 | случайный тай-брейк при лимите ходов | — | — | **вне рамок** (решение заказчика) |
 
@@ -187,7 +187,7 @@ golden/replay-тесты обязаны остаться зелёными.
 
 ---
 
-## Шаг 5 — D2: human-слот из composition root, а не константа в UI (M, риск средний)
+## Шаг 5 — D2: human-слот из composition root, а не константа в UI (M, риск средний) — desktop ✅, android осталось
 
 **Где (хардкод `Card.Suit.SPADES` как «человек»):**
 
@@ -226,6 +226,14 @@ composition root (R6 не нарушается), меняется только �
 Дополнительно: grep не находит `SPADES` как «человека» в рендер-слое (остаётся только
 в composition root).
 
+**Факт (desktop ✅):** в `DesktopLauncher` появилась единственная константа
+`HUMAN_SEAT = SPADES`; она выбирает стратегию в цикле игроков и передаётся в
+`DesktopGameListener(game, screen, HUMAN_SEAT)` → `GameSnapshot.capture(game, humanSeat, log)`.
+`GameSnapshot` получил компонент `humanSeat`, им пользуются `opponents()`/`humanHand()`
+(больше не `SPADES`); `GameScreen` печатает `snap.humanSeat().name()`. Хардкода
+`SPADES` в рендер-слое не осталось. Проверка: `:desktop-libgdx:test` — 3 зелёных,
+`:console:compileJava`, `:desktop-libgdx:compileJava` — ок.
+
 **Коммит(ы):** `pass the human seat from the composition root` (по одному на модуль:
 desktop, android — console тривиален).
 
@@ -258,7 +266,7 @@ desktop, android — console тривиален).
 | 1 | `use EnumMap for suit-keyed game maps` | I5 | S |
 | 2 | `split finishRound into named steps` | I4a | S | ✅ |
 | 3 | `route GameDriver state access through Game accessors` | I4c-A | M | ✅ |
-| 4 | `pass the human seat from the composition root` | D2 | M |
+| 4 | `pass the human seat from the composition root` | D2 | M | desktop ✅ / android ⏳ |
 | 5 | `extract round player queries into RoundResolver` | I4b | S | ✅ |
 
 Каждый коммит — самостоятельный, поведение-сохраняющий, с зелёным `:core:test`.

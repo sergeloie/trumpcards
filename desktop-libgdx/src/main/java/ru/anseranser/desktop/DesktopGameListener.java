@@ -30,11 +30,17 @@ public final class DesktopGameListener implements GameListener {
     private final List<String> log = new ArrayList<>();
     private final GameScreen screen;
     private final Game game;
+    private final Card.Suit humanSeat;
     private final CardLocalizer cardLocalizer = new CardLocalizer(CardLocalizer.Style.LETTERS);
 
-    public DesktopGameListener(Game game, GameScreen screen) {
+    /**
+     * @param humanSeat the seat the composition root ({@link DesktopLauncher})
+     *                  wired to the human, passed down to {@link GameSnapshot}
+     */
+    public DesktopGameListener(Game game, GameScreen screen, Card.Suit humanSeat) {
         this.game = game;
         this.screen = screen;
+        this.humanSeat = humanSeat;
     }
 
     /** Current log lines, oldest first. */
@@ -53,7 +59,7 @@ public final class DesktopGameListener implements GameListener {
         // Capture a consistent snapshot on the engine (game-loop) thread, then
         // apply it on the LibGDX render thread. scene2d widgets are not thread-safe,
         // so mutating them from this background thread would race with stage.act()/draw().
-        GameSnapshot snap = GameSnapshot.capture(game, log());
+        GameSnapshot snap = GameSnapshot.capture(game, humanSeat, log());
         if (Gdx.app != null) {
             Gdx.app.postRunnable(() -> screen.render(snap));
         } else {

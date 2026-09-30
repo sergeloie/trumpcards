@@ -24,9 +24,10 @@ import java.util.List;
  *  +--------------------------------------------------+
  * </pre>
  *
- * The human (SPADES) sits at the bottom. Opponents are drawn as a single
- * face-down card back (rubashka) with the number of cards in their hand and
- * their trump suit, placed LEFT / TOP / RIGHT according to turn order. The pot
+ * The human seat (chosen by the composition root, see {@link DesktopLauncher#HUMAN_SEAT})
+ * sits at the bottom. Opponents are drawn as a single face-down card back
+ * (rubashka) with the number of cards in their hand and their trump suit, placed
+ * LEFT / TOP / RIGHT according to turn order. The pot
  * sits in the middle. All cards and backs are shown vertically; the left and
  * right opponents' cards are rotated 90° so their long edge faces the centre.
  *
@@ -149,10 +150,10 @@ final class GameScreen extends Table {
         potTable.clear();
         addOverlappingRow(potTable, snap.pot(), false);
 
-        // Human hand (bottom) — a single horizontal row, suit order preserved
-        // (SPADES, CLUBS, DIAMONDS, HEARTS) with cards sorted by rank inside
-        // each suit. Cards keep their true size; when they would overflow the row
-        // width they overlap (stack) instead of shrinking.
+        // Human hand (bottom) — a single horizontal row in Card.Suit declaration
+        // order with cards sorted by rank inside each suit. Cards keep their true
+        // size; when they would overflow the row width they overlap (stack)
+        // instead of shrinking.
         humanHandTable.clear();
         List<Card> hand = snap.humanHand().stream()
                 .sorted(Comparator.comparingInt((Card c) -> c.suit().ordinal())
@@ -162,7 +163,7 @@ final class GameScreen extends Table {
 
         // Human trump label under the hand.
         humanHandTable.row();
-        humanHandTable.add(new Label("Your trump: " + Card.Suit.SPADES.name(), skin))
+        humanHandTable.add(new Label("Your trump: " + snap.humanSeat().name(), skin))
                 .center();
     }
 
