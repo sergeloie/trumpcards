@@ -27,6 +27,7 @@ golden-сценарий, какие инварианты обязаны оста
 | Эквивалентность путей | `determinism.SyncAsyncEquivalenceTest` | Sync (блокирующий) и async (`resume`) пути дают одинаковый поток игровых событий (C1/I9). |
 | Golden / сценарии | `ru.anseranser.model.determinism.GoldenScenarioTest` | Конкретные правила на жёстко заданных раскладках. |
 | Воспроизводимость | `determinism.ReplayDeterminismTest`, `determinism.RoundLevelSimulatorTest` | Один seed → один и тот же поток событий/путь партии. |
+| Инвариант табло | `ru.anseranser.model.ScoreboardLadderTest` | Карта, уходящая на табло, всегда равна `Scoreboard.nextRequiredRank` (правило `rules.md` §6 / находка C3) — 300 сидов × обе колоды. |
 | Симулятор | `GameSimulator`, `GameSimulatorTest`, `determinism.RoundLevelSimulatorTest` | Массовые seed'ы, инварианты карт, round-level replay. |
 
 Ключевые инструменты детерминизма (в `determinism`):
@@ -91,7 +92,10 @@ golden-сценарий, какие инварианты обязаны оста
    `MAX_ROUND_MOVES`).
 6. **Правила `rules.md`.** Обязательная передача, бой, взятие банка, выталкивание
    следующего козыря, выбывание по ACE — покрыты golden-сценариями.
-7. **UI-контракты.** `GameState`/snapshot'ы остаются неизменяемыми
+7. **Непрерывность табло.** На табло всегда лежит непрерывная лестница `base..top`, и
+   выталкиваемая карта — именно `Scoreboard.nextRequiredRank(loser.getTrump())`
+   (`ScoreboardLadderTest`; §6 `rules.md`, находка C3).
+8. **UI-контракты.** `GameState`/snapshot'ы остаются неизменяемыми
    (`GameStateTest`); `Dealer.deck()`/`Player.getHand()` — read-only.
 
 **Любой PR, меняющий игровую логику, обязан оставить все пункты зелёными. Если
@@ -105,7 +109,7 @@ golden-сценарий, какие инварианты обязаны оста
   раунд завершается за десятки ходов; кап срабатывает на патологических раздачах
   (например, двое передают друг другу козыри без возможности завершить раунд).
 - При срабатывании капа проигравшим становится игрок с наибольшим числом карт
-  (`Game.mostCardsRounder()`), и партия продолжается.
+  (`RoundResolver.mostCards(players)`), и партия продолжается.
 - `GameSimulator.Result.cappedRounds()` сообщает, сколько раундов игры упёрлись в кап;
   `GameSimulator.countCapped(results)` — сколько **игр** из набора капнули.
 - `GameSimulator.RoundSnapshot.moves()` — число ходов конкретного раунда; для

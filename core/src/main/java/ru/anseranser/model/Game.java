@@ -12,7 +12,6 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Orchestrates a full game: deals rounds, runs moves, determines the loser of
@@ -311,14 +310,31 @@ public class Game {
         pot.clear();
 
         Card.Suit trump = loser.getTrump();
-        Optional<Card> lowestTrump = pile.stream()
-                .filter(c -> c.suit() == trump)
-                .min(Comparator.comparing(c -> c.rank().getValue()));
+        // rules.md §6: the loser's scoreboard receives the card that is the next
+        // rank required for their ladder. Under the game's invariants that is
+        // exactly the lowest trump in this pile — every lower trump already sits
+        // on the board, and the required card must be here, in the round's last
+        // non-empty hand plus the pot (pinned by ScoreboardLadderTest). Naming the
+        // required rank states the rule directly instead of relying on that
+        // equivalence implicitly.
+        Card.Rank required = scoreboard.nextRequiredRank(trump);
+        Card card = required == null ? null : pile.stream()
+                .filter(c -> c.suit() == trump && c.rank() == required)
+                .findFirst()
+                .orElse(null);
+        if (card == null) {
+            // Defensive fallback to the previous lowest-trump selection: under the
+            // invariants `required` is always in the pile, so this only matters if
+            // an invariant ever breaks — and then it degrades exactly as before.
+            card = pile.stream()
+                    .filter(c -> c.suit() == trump)
+                    .min(Comparator.comparing(c -> c.rank().getValue()))
+                    .orElse(null);
+        }
 
         Card pushed = null;
         boolean eliminated;
-        if (lowestTrump.isPresent()) {
-            Card card = lowestTrump.get();
+        if (card != null) {
             pile.remove(card);
             pushed = card;
             eliminated = scoreboard.pushAndEliminates(card);
