@@ -39,6 +39,7 @@ fun AppNavigation(
         composable("gameover") {
             GameOverScreen(
                 winner = state.winner,
+                humanSeat = state.humanSeat,
                 onPlayAgain = {
                     onIntent(GameIntent.NewGame)
                     navController.navigate("start") {

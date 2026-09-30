@@ -22,6 +22,7 @@ import ru.anseranser.model.Card
 @Composable
 fun GameOverScreen(
     winner: Card.Suit?,
+    humanSeat: Card.Suit?,
     onPlayAgain: () -> Unit,
     onGoToMenu: () -> Unit,
     modifier: Modifier = Modifier,
@@ -43,10 +44,7 @@ fun GameOverScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (winner != null) {
-            val winnerName = when (winner) {
-                Card.Suit.SPADES -> "You WIN!"
-                else -> "${suitName(winner)} wins!"
-            }
+            val winnerName = if (winner == humanSeat) "You WIN!" else "${suitName(winner)} wins!"
             Text(
                 text = winnerName,
                 fontSize = 24.sp,

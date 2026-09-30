@@ -51,7 +51,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 | I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий — ✅ выполнено |
 | I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий — ✅ выполнено |
 | I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний — ✅ выполнено (вариант A) |
-| D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний — desktop ✅, android осталось |
+| D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний — ✅ выполнено (desktop + android) |
 | C3 | `endRound()` vs `nextRequiredRank` | — | — | **вне рамок** (решение заказчика) |
 | §8 | случайный тай-брейк при лимите ходов | — | — | **вне рамок** (решение заказчика) |
 
@@ -187,7 +187,7 @@ golden/replay-тесты обязаны остаться зелёными.
 
 ---
 
-## Шаг 5 — D2: human-слот из composition root, а не константа в UI (M, риск средний) — desktop ✅, android осталось
+## Шаг 5 — D2: human-слот из composition root, а не константа в UI (M, риск средний) — ✅ выполнено (desktop + android)
 
 **Где (хардкод `Card.Suit.SPADES` как «человек»):**
 
@@ -234,6 +234,13 @@ composition root (R6 не нарушается), меняется только �
 `SPADES` в рендер-слое не осталось. Проверка: `:desktop-libgdx:test` — 3 зелёных,
 `:console:compileJava`, `:desktop-libgdx:compileJava` — ок.
 
+**Факт (android ✅):** в `GameEngineBridge` появилась единственная константа
+`HUMAN_SEAT`, она выбирает стратегию в `startGame` и попадает в доменный
+`GameState.humanSeat` при каждом `captureState`. `AppNavigation` передаёт её в
+`GameOverScreen(winner, humanSeat, …)`, а тот сравнивает `winner == humanSeat`
+вместо литерала `SPADES`. Проверка: `:android:compileDebugKotlin --offline` — успешно;
+grep не находит `SPADES`-как-человека в UI-слое.
+
 **Коммит(ы):** `pass the human seat from the composition root` (по одному на модуль:
 desktop, android — console тривиален).
 
@@ -263,10 +270,10 @@ desktop, android — console тривиален).
 
 | # | Коммит | Шаг | Оценка |
 |---|---|---|---|
-| 1 | `use EnumMap for suit-keyed game maps` | I5 | S |
+| 1 | `use EnumMap for suit-keyed game maps` | I5 | S | ✅ |
 | 2 | `split finishRound into named steps` | I4a | S | ✅ |
 | 3 | `route GameDriver state access through Game accessors` | I4c-A | M | ✅ |
-| 4 | `pass the human seat from the composition root` | D2 | M | desktop ✅ / android ⏳ |
+| 4 | `pass the human seat from the composition root` | D2 | M | ✅ |
 | 5 | `extract round player queries into RoundResolver` | I4b | S | ✅ |
 
 Каждый коммит — самостоятельный, поведение-сохраняющий, с зелёным `:core:test`.
@@ -275,11 +282,10 @@ desktop, android — console тривиален).
 
 ## Definition of done
 
-- [ ] Каждый шаг — отдельный коммит; `:core:test` зелёный после каждого.
-- [ ] Golden/replay/round-level тесты не менялись (или менялись только как явное
-      подтверждение согласованного изменения поведения — но не в этих шагах).
-- [ ] Публичный API `Game`/`GameDriver`/`SavedGame` не изменился (кроме варианта I4c-B,
-      который отдельно согласуется).
-- [ ] UI-порты компилируются; хардкод human-слота убран из рендер-слоя (D2).
-- [ ] Расхождения с `rules.md` (C3, §8) по-прежнему задокументированы отдельно и не
-      «исправлены» молча.
+- [x] Каждый шаг — отдельный коммит; `:core:test` зелёный после каждого.
+- [x] Golden/replay/round-level тесты не менялись.
+- [x] Публичный API `Game`/`GameDriver`/`SavedGame` не изменился (вариант I4c-B не делался).
+- [x] UI-порты компилируются (`:console`, `:desktop-libgdx`, `:android:compileDebugKotlin`);
+      хардкод human-слота убран из рендер-слоя (D2 — desktop и android).
+- [x] Расхождения с `rules.md` (C3, §8) по-прежнему задокументированы отдельно и не
+      «исправлены» молча (вне рамок, ждут решения заказчика).

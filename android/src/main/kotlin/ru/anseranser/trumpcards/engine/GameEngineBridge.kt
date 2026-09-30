@@ -16,6 +16,16 @@ import java.util.concurrent.LinkedBlockingQueue
 
 class GameEngineBridge {
 
+    companion object {
+        /**
+         * The seat the human plays (finding D2). Decided once here, in the
+         * composition root, and surfaced to the view through
+         * [ru.anseranser.trumpcards.domain.GameState.humanSeat] so the UI never
+         * assumes a particular suit is the human.
+         */
+        val HUMAN_SEAT: Card.Suit = Card.Suit.SPADES
+    }
+
     private val _state = MutableStateFlow(ru.anseranser.trumpcards.domain.GameState())
     val state: StateFlow<ru.anseranser.trumpcards.domain.GameState> = _state
 
@@ -39,7 +49,7 @@ class GameEngineBridge {
 
         val players = mutableListOf<Player>()
         for (suit in Card.Suit.entries) {
-            val strategy = if (suit == Card.Suit.SPADES) {
+            val strategy = if (suit == HUMAN_SEAT) {
                 HumanDecisionStrategy(inputProvider)
             } else {
                 AiDecisionStrategy()
@@ -144,6 +154,7 @@ class GameEngineBridge {
             isWaitingForInput = d.isAwaitingHumanInput,
             inputRequest = inputRequest,
             winner = if (d.isGameOver) d.game.winner?.trump else null,
+            humanSeat = HUMAN_SEAT,
         )
     }
 

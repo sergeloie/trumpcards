@@ -283,9 +283,10 @@
 - **Категория:** протекание доменного факта в UI.
 - **Серьёзность:** **Желательно.**
 - **Оценка:** S.
-- **Статус:** desktop ✅ — слот решает один раз `DesktopLauncher.HUMAN_SEAT` и прокидывается
+- **Статус:** ✅ desktop — слот решает один раз `DesktopLauncher.HUMAN_SEAT` и прокидывается
   через `DesktopGameListener` в `GameSnapshot.humanSeat()`; в рендер-слое `SPADES` больше нет.
-  Android — ещё не сделан (см. `docs/refactoring-plan.md`, Шаг 5).
+  ✅ android — `GameEngineBridge.HUMAN_SEAT` → доменный `GameState.humanSeat` → `GameOverScreen`.
+  См. `docs/refactoring-plan.md`, Шаг 5.
 
 ### D3 — Порядок потребления RNG как часть контракта детерминизма не задокументирован
 
@@ -380,7 +381,7 @@
 | # | Находка | Действие | Оценка |
 |---|---|---|---|
 | 14 | **D1** — битые javadoc-ссылки | ✅ приведены к `playGame(Rng)` | S |
-| 15 | **D2** — хардкод `SPADES` в desktop | ✅ desktop (composition root → snapshot); android — ещё нет | S |
+| 15 | **D2** — хардкод `SPADES` в desktop | ✅ desktop (composition root → snapshot) и android (`GameEngineBridge` → `GameState.humanSeat`) | S |
 | 16 | **D3** — порядок RNG не задокументирован | ✅ зафиксирован в `docs/determinism-audit.md` §3 | S |
 | 17 | **D4** — `SplitMix64()` на `nanoTime` | ✅ зафиксирован в аудите §3.1 (единственный платформенный источник) | S |
 

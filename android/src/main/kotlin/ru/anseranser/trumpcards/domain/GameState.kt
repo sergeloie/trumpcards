@@ -14,6 +14,8 @@ data class GameState(
     val isWaitingForInput: Boolean = false,
     val inputRequest: InputRequestInfo? = null,
     val winner: Card.Suit? = null,
+    /** The seat the human plays, as decided by the composition root (finding D2). */
+    val humanSeat: Card.Suit? = null,
     val statusMessage: String = "",
     val lastEvent: GameEventSnapshot? = null,
 )
