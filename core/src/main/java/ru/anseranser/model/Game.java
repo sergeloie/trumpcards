@@ -683,29 +683,48 @@ public class Game {
         public void finishRound() {
             if (phase != Phase.ROUND_ENDED) return;
 
-            Player loser;
-            if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
-                cappedRounds++;
-                loser = mostCardsRounder();
-            } else {
-                loser = determineLoser();
-            }
+            Player loser = resolveLoser();
 
             boolean eliminated = endRound(loser);
             if (eliminated) {
                 loser.setGamer(false);
             }
-            // House rule: the loser of the previous round deals the next one.
-            // If the loser was eliminated (ladder completed) there is no live
-            // dealer, so fall back to the next active gamer.
-            dealerSeat = loser.isGamer() ? loser : nextDealer(loser);
+
+            dealerSeat = advanceDealer(loser);
 
             if (countActiveGamers() > 1) {
                 beginRound();
             } else {
-                phase = Phase.GAME_ENDED;
-                listener.onEvent(new GameEvent.GameEnded(getWinner().getTrump()));
+                endGame();
             }
+        }
+
+        /**
+         * Pick the round's loser: the player with the most cards left when the
+         * round hit the move cap (a capped round — the counter is bumped here),
+         * otherwise the player still holding cards on the normal exit path.
+         */
+        private Player resolveLoser() {
+            if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
+                cappedRounds++;
+                return mostCardsRounder();
+            }
+            return determineLoser();
+        }
+
+        /**
+         * The dealer of the next round is the loser of the previous one
+         * (house rule). If the loser was eliminated (ladder completed) there
+         * is no live dealer, so fall back to the next active gamer.
+         */
+        private Player advanceDealer(Player loser) {
+            return loser.isGamer() ? loser : nextDealer(loser);
+        }
+
+        /** Finish the game: only one active gamer remains. */
+        private void endGame() {
+            phase = Phase.GAME_ENDED;
+            listener.onEvent(new GameEvent.GameEnded(getWinner().getTrump()));
         }
 
         public boolean isGameOver() { return phase == Phase.GAME_ENDED; }

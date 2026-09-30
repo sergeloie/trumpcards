@@ -48,7 +48,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 | # | Находка | Требование ТЗ (Задание 4) | Оценка | Риск |
 |---|---|---|---|---|
 | I5 | `HashMap` в `distributeObligatoryCards`/`snapshotHands` | — | S | низкий — ✅ выполнено |
-| I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий |
+| I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий — ✅ выполнено |
 | I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий (опционально) |
 | I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний |
 | D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний |
@@ -78,7 +78,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 
 ---
 
-## Шаг 2 — I4a: разложить `finishRound()` на именованные шаги (S, риск низкий)
+## Шаг 2 — I4a: разложить `finishRound()` на именованные шаги (S, риск низкий) — ✅ выполнено
 
 **Где:** `Game.GameDriver.finishRound()`.
 
@@ -106,6 +106,10 @@ public void finishRound() {
 (`fullScriptedGame_...`, `roundEnd_pushesNextTrump...`), `ReplayDeterminismTest`.
 
 **Коммит:** `split finishRound into named steps`.
+
+**Факт:** `finishRound()` теперь делегирует в `resolveLoser()` (внутри — `cappedRounds++`),
+`advanceDealer(loser)` и `endGame()`; `endRound(loser)` уже существовал. Порядок
+вызовов и ветвлений не менялся — `:core:test` зелёный (85 тестов).
 
 ---
 
@@ -238,7 +242,7 @@ desktop, android — console тривиален).
 | # | Коммит | Шаг | Оценка |
 |---|---|---|---|
 | 1 | `use EnumMap for suit-keyed game maps` | I5 | S |
-| 2 | `split finishRound into named steps` | I4a | S |
+| 2 | `split finishRound into named steps` | I4a | S | ✅ |
 | 3 | `route GameDriver state access through Game accessors` | I4c-A | M |
 | 4 | `pass the human seat from the composition root` | D2 | M |
 | 5 | *(опц.)* `extract round player queries into RoundResolver` | I4b | S |
