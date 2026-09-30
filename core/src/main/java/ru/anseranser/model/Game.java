@@ -13,7 +13,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 
 /**
  * Orchestrates a full game: deals rounds, runs moves, determines the loser of
@@ -241,34 +240,6 @@ public class Game {
         }
     }
 
-    // ---------- Round helpers ----------
-
-    /**
-     * The single walk over the seating order (finding I1): every "which players
-     * …" query is expressed as a filter over this one pass, so the per-round
-     * loops cannot drift apart in what they visit or in what order.
-     */
-    private List<Player> playersWhere(Predicate<Player> predicate) {
-        List<Player> result = new ArrayList<>();
-        for (Player p : players) {
-            if (predicate.test(p)) result.add(p);
-        }
-        return result;
-    }
-
-    /** Players still in the round: active gamers holding at least one card, in seating order. */
-    private List<Player> activeGamersWithCards() {
-        return playersWhere(p -> p.isGamer() && !p.getHand().isEmpty());
-    }
-
-    private int countActiveGamersWithCards() {
-        return activeGamersWithCards().size();
-    }
-
-    private int countActiveGamers() {
-        return playersWhere(Player::isGamer).size();
-    }
-
     // ---------- Round ----------
 
     /**
@@ -299,21 +270,6 @@ public class Game {
                 dealerSeat.getTrump(),
                 snapshotScoreboard(),
                 snapshotHands()));
-    }
-
-    /**
-     * Fallback loser for a capped (non-terminating) round: most cards in hand.
-     * On a tie the first by seating order wins, matching the previous strict
-     * {@code >} scan (see {@code rules.md} §8 tie-break note in the review).
-     */
-    private Player mostCardsRounder() {
-        return activeGamersWithCards().stream()
-                .max(Comparator.comparingInt((Player p) -> p.getHand().size()))
-                .orElse(null);
-    }
-
-    private Player determineLoser() {
-        return activeGamersWithCards().stream().findFirst().orElse(null);
     }
 
     private Player nextDealer(Player from) {
@@ -651,7 +607,7 @@ public class Game {
         private void advanceAfterTurn() {
             current = players.nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
             moves++;
-            if (countActiveGamersWithCards() <= 1 || moves >= MAX_ROUND_MOVES) {
+            if (RoundResolver.countActiveWithCards(players) <= 1 || moves >= MAX_ROUND_MOVES) {
                 phase = Phase.ROUND_ENDED;
             }
         }
@@ -692,7 +648,7 @@ public class Game {
 
             dealerSeat = advanceDealer(loser);
 
-            if (countActiveGamers() > 1) {
+            if (RoundResolver.countActive(players) > 1) {
                 beginRound();
             } else {
                 endGame();
@@ -705,11 +661,11 @@ public class Game {
          * otherwise the player still holding cards on the normal exit path.
          */
         private Player resolveLoser() {
-            if (moves >= MAX_ROUND_MOVES && countActiveGamersWithCards() > 1) {
+            if (moves >= MAX_ROUND_MOVES && RoundResolver.countActiveWithCards(players) > 1) {
                 cappedRounds++;
-                return mostCardsRounder();
+                return RoundResolver.mostCards(players);
             }
-            return determineLoser();
+            return RoundResolver.firstWithCards(players);
         }
 
         /**

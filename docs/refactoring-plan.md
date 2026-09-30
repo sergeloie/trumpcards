@@ -30,7 +30,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 
 | Находка | Что сделано |
 |---|---|
-| **I1** (4 обхода игроков) | сведены в один `Game.playersWhere(Predicate)` + `activeGamersWithCards()` |
+| **I1** (4 обхода игроков) | сведены в один общий обход (теперь `RoundResolver.where` + семантические запросы) |
 | **C1/I9** (дубль правила хода) | `Player.nextActionKind` + `applyLead/applyDefense/applyTakePot`; `GameDriver` — только пауза/resume |
 | **I2** (`playerByTrump`) | оставлен один статический метод |
 | **I3** (сериализация) | вынесена в `SavedGameMapper` |
@@ -49,7 +49,7 @@ D3, D4 (см. статусы «✅ исправлено» в `docs/review.md`). 
 |---|---|---|---|---|
 | I5 | `HashMap` в `distributeObligatoryCards`/`snapshotHands` | — | S | низкий — ✅ выполнено |
 | I4a | `finishRound()` смешивает 4 смысла | п.4 | S | низкий — ✅ выполнено |
-| I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий (опционально) |
+| I4b | Обходы игроков в отдельном `RoundResolver` | п.1 | S | низкий — ✅ выполнено |
 | I4c | `GameDriver` читает приватные поля `Game.this` | п.1 (п.3) | M | средний |
 | D2 | Хардкод human-слота `SPADES` в UI | п.5 | M | средний |
 | C3 | `endRound()` vs `nextRequiredRank` | — | — | **вне рамок** (решение заказчика) |
@@ -113,7 +113,7 @@ public void finishRound() {
 
 ---
 
-## Шаг 3 — I4b: `RoundResolver` (S, риск низкий, **опционально**)
+## Шаг 3 — I4b: `RoundResolver` (S, риск низкий, **опционально**) — ✅ выполнено
 
 **Где:** обходы игроков в `Game` (`playersWhere`, `activeGamersWithCards`,
 `countActiveGamers`, `countActiveGamersWithCards`, `mostCardsRounder`,
@@ -139,6 +139,13 @@ god-class; приоритет низкий, можно отложить. Есл�
 **Проверка:** весь `:core:test` (в т.ч. `GameTest`, golden).
 
 **Коммит (если делаем):** `extract round player queries into RoundResolver`.
+
+**Факт:** сделан (выбран статический вариант без состояния). Новый пакетно-приватный
+`RoundResolver` содержит единственный общий обход `where(TurnOrder, Predicate)` и
+семантические запросы `activeWithCards`, `countActive`, `countActiveWithCards`,
+`mostCards`, `firstWithCards`. `Game` больше не держит ни одного из них — вызовы в
+`advanceAfterTurn()`, `finishRound()`, `resolveLoser()` идут прямо в `RoundResolver`.
+Порядок обхода и тай-брейк по месту сохранены.
 
 ---
 
@@ -245,7 +252,7 @@ desktop, android — console тривиален).
 | 2 | `split finishRound into named steps` | I4a | S | ✅ |
 | 3 | `route GameDriver state access through Game accessors` | I4c-A | M |
 | 4 | `pass the human seat from the composition root` | D2 | M |
-| 5 | *(опц.)* `extract round player queries into RoundResolver` | I4b | S |
+| 5 | `extract round player queries into RoundResolver` | I4b | S | ✅ |
 
 Каждый коммит — самостоятельный, поведение-сохраняющий, с зелёным `:core:test`.
 
