@@ -62,10 +62,31 @@ These are the facts the new engine has to reproduce.
    its event stream (card played, card beaten, pot taken, round started, round ended,
    game ended), each naming the seat by its trump suit. The new engine's events must
    carry the same information, so the two traces can be compared one to one.
+7. **The rank order.** The old `Card.Rank` carries a value counting from TWO = 2. The
+   new `Card.Rank` has no value; its ordinal starts at TWO = 0. The two orderings are
+   the same, but a number from one must never be compared with a number from the other:
+   use the ordinal, or an accessor that adds two.
+8. **No legal move means the game is over.** The state carries no phase. The engine
+   must never leave a state in which the seat to move cannot act while the game is not
+   over — a seat with an empty hand is out of the round, and the turn moves on.
 
 Everything above is read off the old implementation, not invented. The generator is
 ported verbatim — the same SplitMix64 constants and the same rejection sampling — not
 re-implemented.
+
+### What T1 established
+
+- The module is `engine`, the package is `ru.anseranser.engine`, and the module's
+  **main and runtime classpaths are empty** — JUnit is test-scoped only, and there is
+  no Lombok.
+- `Game` is a final class with a private constructor and three **static** methods:
+  `start(Setup)`, `legalMoves(State)`, `step(State, int)`.
+- `Move` is a sealed interface with `Move.Play(Card)` and `Move.TakePot()`, not a
+  record with a kind and a nullable card.
+- `Setup` validates its own shape: two to four distinct trump suits.
+- `State` holds the seats, the pot, the deck, the dealer, the seat to move and the
+  generator's position. The board belongs to the seat; the round counter and the
+  "must lead" flag arrive with T4.
 
 ### The new engine's package
 
