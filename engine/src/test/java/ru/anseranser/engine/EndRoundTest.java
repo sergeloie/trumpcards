@@ -255,7 +255,7 @@ class EndRoundTest {
 
     private static State state(List<Card> pot, Seat... seats) {
         List<Seat> all = List.of(seats);
-        return new State(all, pot, List.of(), all.get(0), all.get(0), 42L);
+        return new State(all, pot, List.of(), all.get(0), all.get(0), false, 0, 42L);
     }
 
     private static List<Card> cardsInHands(State state) {

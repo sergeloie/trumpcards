@@ -65,7 +65,7 @@ final class Exchange {
         return new State(exchanged, state.pot(), state.deck(),
                 exchanged.get(Seats.indexOfTrump(seats, state.dealer().trump())),
                 exchanged.get(Seats.indexOfTrump(seats, state.turn().trump())),
-                state.rngState());
+                state.leadRequired(), state.turns(), state.rngState());
     }
 
     private record Transfer(int from, Card card, int to) {

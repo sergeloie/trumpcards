@@ -29,15 +29,17 @@ public final class Game {
      * The moves the seat to move may choose from; empty when the game is over.
      */
     public static List<Move> legalMoves(State state) {
-        return List.of();
+        return Trick.legalMoves(state);
     }
 
     /**
      * The result of applying the move at {@code moveIndex} to {@code state}.
+     * The index is a position in the list {@link #legalMoves(State)} returns,
+     * so an illegal move has no representation.
      *
-     * @throws UnsupportedOperationException until the rules are written
+     * @throws IndexOutOfBoundsException when the index is not a legal move
      */
     public static Transition step(State state, int moveIndex) {
-        throw new UnsupportedOperationException("the rules are not written yet");
+        return new Transition(Trick.step(state, moveIndex), List.of());
     }
 }

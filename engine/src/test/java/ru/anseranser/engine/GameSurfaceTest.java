@@ -10,19 +10,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class GameStubTest {
-
-    @Test
-    void legalMovesAreEmptyWhileTheRulesAreNotWritten() {
-        assertEquals(List.of(), Game.legalMoves(state()));
-    }
-
-    @Test
-    void stepIsNotWrittenYet() {
-        assertThrows(UnsupportedOperationException.class, () -> Game.step(state(), 0));
-    }
+class GameSurfaceTest {
 
     @Test
     void thePublicSurfaceIsExactlyThreeMethods() {
@@ -33,10 +22,5 @@ class GameStubTest {
         assertEquals(3, publicMethods.size());
         assertEquals(Set.of("start", "legalMoves", "step"),
                 publicMethods.stream().map(Method::getName).collect(Collectors.toSet()));
-    }
-
-    private static State state() {
-        Seat seat = new Seat(Card.Suit.SPADES, List.of(), List.of(), false);
-        return new State(List.of(seat), List.of(), List.of(), seat, seat, 0L);
     }
 }

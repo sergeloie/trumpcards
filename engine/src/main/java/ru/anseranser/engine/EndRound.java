@@ -53,7 +53,8 @@ final class EndRound {
         Seat dealer = eliminated
                 ? resolved.get(Seats.nextInGame(resolved, loserIndex))
                 : resolved.get(loserIndex);
-        return new State(resolved, List.of(), pile, dealer, dealer, state.rngState());
+        return new State(resolved, List.of(), pile, dealer, dealer, false, state.turns(),
+                state.rngState());
     }
 
     /**

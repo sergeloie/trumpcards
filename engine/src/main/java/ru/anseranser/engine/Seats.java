@@ -32,6 +32,17 @@ final class Seats {
         return count;
     }
 
+    /** The number of seats that are still in the game and hold at least one card. */
+    static int countWithCards(List<Seat> seats) {
+        int count = 0;
+        for (Seat seat : seats) {
+            if (!seat.out() && !seat.hand().isEmpty()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     /** The index of the next seat still in the game after the seat at {@code index}. */
     static int nextInGame(List<Seat> seats, int index) {
         for (int i = 1; i <= seats.size(); i++) {
@@ -41,5 +52,21 @@ final class Seats {
             }
         }
         throw new IllegalStateException("no seat is still in the game");
+    }
+
+    /**
+     * The index of the next seat that can act after the seat at {@code index}:
+     * the next seat in seating order that is still in the game and holds at
+     * least one card. A seat with an empty hand is out of the round.
+     */
+    static int nextWithCards(List<Seat> seats, int index) {
+        for (int i = 1; i <= seats.size(); i++) {
+            int candidate = (index + i) % seats.size();
+            Seat seat = seats.get(candidate);
+            if (!seat.out() && !seat.hand().isEmpty()) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("no seat can act");
     }
 }

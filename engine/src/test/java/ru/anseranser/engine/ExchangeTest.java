@@ -151,7 +151,7 @@ class ExchangeTest {
     void theDealerAndTheSeatToMoveAreTheExchangedSeats() {
         Seat spades = seat(SPADES, List.of(card(CLUBS, SEVEN)), board(SPADES, SIX));
         Seat clubs = seat(CLUBS, List.of(), board(CLUBS, SIX));
-        State state = new State(List.of(spades, clubs), List.of(), List.of(), spades, clubs, 7L);
+        State state = new State(List.of(spades, clubs), List.of(), List.of(), spades, clubs, false, 0, 7L);
 
         State exchanged = Exchange.apply(state);
 
@@ -274,7 +274,7 @@ class ExchangeTest {
 
     private static State state(Seat... seats) {
         List<Seat> all = List.of(seats);
-        return new State(all, List.of(), List.of(), all.get(0), all.get(0), 0L);
+        return new State(all, List.of(), List.of(), all.get(0), all.get(0), false, 0, 0L);
     }
 
     private static int cardsInPlay(State state) {

@@ -46,7 +46,7 @@ final class Dealing {
                     List.of(new Card(trump, setup.rankSet().baseRank())), false));
         }
         Seat dealer = seats.get(dealerIndex);
-        return new State(seats, List.of(), List.of(), dealer, dealer, rng.state());
+        return new State(seats, List.of(), List.of(), dealer, dealer, false, 0, rng.state());
     }
 
     /**
@@ -71,7 +71,7 @@ final class Dealing {
         return new State(dealt, state.pot(), List.of(),
                 dealt.get(dealerIndex),
                 dealt.get(Seats.indexOfTrump(seats, state.turn().trump())),
-                rng.state());
+                false, 0, rng.state());
     }
 
     /**

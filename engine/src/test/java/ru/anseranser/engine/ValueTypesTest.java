@@ -55,7 +55,7 @@ class ValueTypesTest {
         List<Seat> seats = new ArrayList<>(List.of(seat()));
         List<Card> pot = new ArrayList<>(List.of(SIX_OF_SPADES));
         List<Card> deck = new ArrayList<>(List.of(SIX_OF_SPADES));
-        State state = new State(seats, pot, deck, seats.get(0), seats.get(0), 7L);
+        State state = new State(seats, pot, deck, seats.get(0), seats.get(0), false, 0, 7L);
 
         seats.clear();
         pot.clear();
@@ -118,6 +118,6 @@ class ValueTypesTest {
 
     private static State state() {
         Seat seat = seat();
-        return new State(List.of(seat), List.of(), List.of(), seat, seat, 0L);
+        return new State(List.of(seat), List.of(), List.of(), seat, seat, false, 0, 0L);
     }
 }
