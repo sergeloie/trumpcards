@@ -115,6 +115,15 @@ public record Vector(float[] values, long mask) {
         return new Vector(values, mask(moves));
     }
 
+    /**
+     * The action that plays the card: the slot of the card in the action
+     * space, the suits in the canonical order and the ranks ascending. It is
+     * the bit the mask holds for the card.
+     */
+    public static int actionOf(Card card) {
+        return card.suit().ordinal() * RANKS + card.rank().ordinal();
+    }
+
     @Override
     public float[] values() {
         return values.clone();
@@ -132,15 +141,10 @@ public record Vector(float[] values, long mask) {
         return 31 * Arrays.hashCode(values) + Long.hashCode(mask);
     }
 
-    /** The slot of the card: the suits in the canonical order, the ranks ascending. */
-    private static int cardIndex(Card card) {
-        return card.suit().ordinal() * RANKS + card.rank().ordinal();
-    }
-
     /** The cards of a pile: in the hand, or in the pot. */
     private static void writeCards(float[] values, int offset, List<Card> cards, Card.Suit trump) {
         for (Card card : cards) {
-            int base = offset + cardIndex(card) * CARD_VALUES;
+            int base = offset + actionOf(card) * CARD_VALUES;
             values[base + CARD_IN_HAND] = 1f;
             values[base + CARD_RANK] = card.rank().ordinal() + 1;
             values[base + CARD_TRUMP] = card.suit() == trump ? 1f : 0f;
@@ -184,7 +188,7 @@ public record Vector(float[] values, long mask) {
         long mask = 0;
         for (Move move : moves) {
             if (move instanceof Move.Play play) {
-                mask |= 1L << cardIndex(play.card());
+                mask |= 1L << actionOf(play.card());
             } else {
                 mask |= 1L << TAKE_POT;
             }

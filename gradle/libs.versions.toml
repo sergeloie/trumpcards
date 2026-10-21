@@ -2,6 +2,7 @@
 gson = "2.11.0"
 junit-jupiter = "5.12.1"
 lombok = "1.18.46"
+onnxruntime = "1.23.2"
 kotlin = "2.2.21"
 agp = "8.9.0"
 compose-bom = "2026.06.01"
@@ -19,6 +20,7 @@ desugar = "2.1.4"
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+onnxruntime = { module = "com.microsoft.onnxruntime:onnxruntime", version.ref = "onnxruntime" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 compose-ui = { group = "androidx.compose.ui", name = "ui" }
 compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
