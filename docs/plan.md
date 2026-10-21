@@ -289,6 +289,33 @@ recorded as its own task (T19) rather than folded into the migration.
 - The vector does not encode the rank set, so a model trained on the 36-card deck does
   not serve the 52-card one.
 
+### What T11 and T12 established
+
+- **`ml` runs the model.** `OnnxPolicy` loads an ONNX file into a session with one
+  thread for the intra-op and one for the inter-op, so the same weights and the same
+  state give the same choice. The input and output names are discovered from the
+  session; the shapes are checked (352 in, 53 out). A missing file, a model that
+  cannot be loaded, a model of the wrong shape and an action that is not legal all
+  fail loudly.
+- The test suite **builds a real ONNX model at run time** — the protobuf is written
+  by hand, no Python and no committed binary — so the tests prove that the session
+  loads, masks and converts.
+- **`tools/exporter` writes the episodes.** One JSON object per line, one line per
+  game: the setup, and per step the 352 floats, the mask, the **action** (the card's
+  slot, or 52 for taking the pot) and the legal moves. The winner closes the line.
+  A trainer in Python therefore never reimplements the rules.
+- The exporter drives any policy through the one shape they all have,
+  `int choose(State, List<Move> moves)`, and never names an ONNX type — so `ml` can
+  keep the runtime as `implementation` and the exporter can drive the rule bot with
+  the same code.
+- The traps a checker has to know: one line is a whole episode (a line is about a
+  megabyte, so stream it); the mask is an integer up to 2^52, so read it as int64;
+  the action is the card's slot and **not** the position in `legalMoves`; the mask's
+  bit count equals the number of legal moves; the rank set is in the setup and not in
+  the vector, so a model trained on one deck size does not serve the other; and the
+  meaning of the 352 numbers lives in `ml`'s `Vector`, not in the file — the Python
+  side needs that layout separately.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
