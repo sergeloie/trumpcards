@@ -22,7 +22,7 @@ public final class Game {
      */
     public static Transition start(Setup setup) {
         State dealt = Dealing.deal(setup);
-        return new Transition(Exchange.apply(dealt, setup.rankSet()), List.of());
+        return new Transition(Exchange.apply(dealt), List.of());
     }
 
     /**

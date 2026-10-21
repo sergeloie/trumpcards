@@ -31,7 +31,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, SEVEN)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(), board(CLUBS, SIX)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(), exchanged.seats().get(0).hand(),
                 "the seven of clubs belongs to the seat that plays clubs");
@@ -44,7 +44,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, NINE), card(CLUBS, TEN)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(), board(CLUBS, SIX, SEVEN, EIGHT)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(CLUBS, TEN)), exchanged.seats().get(0).hand(),
                 "only the nine is required, the ten stays where it is");
@@ -52,15 +52,15 @@ class ExchangeTest {
     }
 
     @Test
-    void theRankSetDecidesTheRankTheBoardRequires() {
+    void theRankAfterTheTopOfTheBoardIsRequired() {
         State state = state(
                 seat(SPADES, List.of(card(CLUBS, THREE), card(CLUBS, SEVEN)), board(SPADES, TWO)),
                 seat(CLUBS, List.of(), board(CLUBS, TWO)));
 
-        State exchanged = Exchange.apply(state, RankSet.TWO_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(CLUBS, SEVEN)), exchanged.seats().get(0).hand(),
-                "the board of a fifty-two card game requires the three, not the seven");
+                "the board requires the rank after its top card, the three, not the seven");
         assertEquals(List.of(card(CLUBS, THREE)), exchanged.seats().get(1).hand());
     }
 
@@ -70,7 +70,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, ACE)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(), board(CLUBS, SIX, SEVEN, EIGHT, NINE, TEN, KING)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(CLUBS, ACE)), exchanged.seats().get(0).hand(),
                 "the ace stays with the seat that holds it");
@@ -83,7 +83,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, ACE)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(), board(CLUBS, SIX, SEVEN, EIGHT, NINE, TEN, KING, ACE)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(CLUBS, ACE)), exchanged.seats().get(0).hand());
         assertEquals(List.of(), exchanged.seats().get(1).hand());
@@ -95,7 +95,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, SEVEN)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(card(SPADES, SEVEN)), board(CLUBS, SIX)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(SPADES, SEVEN)), exchanged.seats().get(0).hand(),
                 "the seven of spades arrives at its owner and is not passed on");
@@ -111,7 +111,7 @@ class ExchangeTest {
                 seat(CLUBS, List.of(card(SPADES, SEVEN)), board(CLUBS, SIX)),
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(CLUBS, EIGHT), card(SPADES, SEVEN)), exchanged.seats().get(0).hand(),
                 "the cards that stay keep their order, the card that arrives goes last");
@@ -128,7 +128,7 @@ class ExchangeTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(cardsInPlay(state), cardsInPlay(exchanged));
         assertEquals(cardsInHands(state), cardsInHands(exchanged));
@@ -141,7 +141,7 @@ class ExchangeTest {
                 seat(SPADES, List.of(card(CLUBS, SEVEN)), board(SPADES, SIX)),
                 seat(CLUBS, List.of(), board(CLUBS, SIX)));
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertEquals(List.of(card(SPADES, SIX)), exchanged.seats().get(0).board());
         assertEquals(List.of(card(CLUBS, SIX)), exchanged.seats().get(1).board());
@@ -153,7 +153,7 @@ class ExchangeTest {
         Seat clubs = seat(CLUBS, List.of(), board(CLUBS, SIX));
         State state = new State(List.of(spades, clubs), List.of(), List.of(), spades, clubs, 7L);
 
-        State exchanged = Exchange.apply(state, RankSet.SIX_TO_ACE);
+        State exchanged = Exchange.apply(state);
 
         assertSame(exchanged.seats().get(0), exchanged.dealer());
         assertSame(exchanged.seats().get(1), exchanged.turn());

@@ -9,6 +9,9 @@ import java.util.List;
  * every suit goes on the board of the seat that owns the suit, the rest is
  * shuffled and dealt one card at a time from the seat to the left of the
  * dealer.
+ *
+ * <p>The next round is dealt from the cards that came back from the deck pool,
+ * not from a new deck.
  */
 final class Dealing {
 
@@ -47,6 +50,31 @@ final class Dealing {
     }
 
     /**
+     * The next round: the cards that came back from the deck pool are shuffled
+     * and dealt to the seats still in the game, one card at a time, starting
+     * from the seat to the left of the dealer.
+     */
+    static State dealNextRound(State state) {
+        List<Card> pool = new ArrayList<>(state.deck());
+        SplitMix64 rng = new SplitMix64(state.rngState());
+        shuffle(pool, rng);
+
+        List<Seat> seats = state.seats();
+        int dealerIndex = Seats.indexOfTrump(seats, state.dealer().trump());
+        List<List<Card>> hands = dealHands(pool, seats, dealerIndex);
+
+        List<Seat> dealt = new ArrayList<>();
+        for (int i = 0; i < seats.size(); i++) {
+            Seat seat = seats.get(i);
+            dealt.add(new Seat(seat.trump(), hands.get(i), seat.board(), seat.out()));
+        }
+        return new State(dealt, state.pot(), List.of(),
+                dealt.get(dealerIndex),
+                dealt.get(Seats.indexOfTrump(seats, state.turn().trump())),
+                rng.state());
+    }
+
+    /**
      * The cards to deal, in the canonical order: by suit, and within a suit by
      * rank ascending. The base card of every suit is left out, because it goes
      * on the board of the seat that owns the suit.
@@ -76,6 +104,23 @@ final class Dealing {
         for (Card card : deck) {
             hands.get(seat).add(card);
             seat = (seat + 1) % seatCount;
+        }
+        return hands;
+    }
+
+    /**
+     * The hands of the next round: the pool is dealt on top of the hands that
+     * are left, and the seats that are out of the game receive nothing.
+     */
+    private static List<List<Card>> dealHands(List<Card> pool, List<Seat> seats, int dealerIndex) {
+        List<List<Card>> hands = new ArrayList<>();
+        for (Seat seat : seats) {
+            hands.add(new ArrayList<>(seat.hand()));
+        }
+        int seat = Seats.nextInGame(seats, dealerIndex);
+        for (Card card : pool) {
+            hands.get(seat).add(card);
+            seat = Seats.nextInGame(seats, seat);
         }
         return hands;
     }
