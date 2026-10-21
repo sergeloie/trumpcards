@@ -196,6 +196,25 @@ The old engine is what the console, the desktop and the Android apps run today, 
 this is a defect in the shipped product, not only in the code being replaced. It is
 recorded as its own task (T19) rather than folded into the migration.
 
+### What T6 established
+
+- **The seam was widened, not derived.** The rules return a `Transition` and report
+  what they did: `Dealing` reports the round and the cards dealt, `Exchange` reports
+  every transfer, `EndRound` reports the round that ended, the card pushed and the
+  elimination, `Trick` reports the card played, the card beaten or the pot taken.
+- Deriving the events from the old and the new state cannot work for two facts: the
+  deal is not derivable at all, because the dealt state is gone once the exchange has
+  run, and a round that ended without a card for the board is indistinguishable from a
+  round that did not end.
+- The vocabulary the golden gate compares: `CardPlayed`, `CardBeaten` (with the card
+  that was beaten), `PotTaken` (with the top card and the size), `RoundEnded` (with
+  the loser and the card pushed, absent when there was none), `SeatEliminated`,
+  `GameEnded`, and for the setup `RoundStarted`, `CardsDealt`, `CardsExchanged`.
+- The old stream differs in three ways the gate has to bridge: it has no
+  `CardsDealt` and no `CardsExchanged`, it folds the elimination into `RoundEnded` as
+  a flag, and it names the seat by its trump suit where the new events carry the
+  `Seat`. The old `AwaitingHumanInput` has no counterpart and is filtered out.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
