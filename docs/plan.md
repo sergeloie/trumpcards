@@ -167,6 +167,35 @@ something to call when the last card of the round is played.
   derived — the loser is the seat whose board grew, and the pushed card is the last
   card of that board. T6 either derives them that way or widens the seam.
 
+### What T4 established
+
+- `Trick` holds the trick rule; `Game.legalMoves` and `Game.step` delegate to it. The
+  step returns the new state, and the events stay T6's business.
+- `State` gained two fields: `leadRequired` and `turns`, the round's turn counter.
+  Every rule that builds a state carries them.
+- The turn counter increments exactly where the old engine's did: after a lead, after
+  taking the pot, and after a defence that emptied the hand.
+- `Seats` gained `countWithCards` and `nextWithCards`; the latter wraps around to the
+  current seat, as the old `TurnOrder.nextActive` did.
+- The step calls `EndRound.apply` when the round is over — at most one seat still
+  holds cards — or when the bound fires.
+- **The events can be derived from the old and the new state**: the new pot's last card
+  is the card played; whether it was a lead or a beat is decided by the *old* state
+  (`leadRequired || pot.isEmpty()`); an old pot that is not empty and a new pot that is
+  means the pot was taken; a board that grew means the round ended; the counter back to
+  zero means a new round was dealt.
+
+### A live defect in the old engine
+
+If a round starts with a **single card in play** — possible in the last rounds of a
+long game, when the pool that came back is smaller than the number of seats — then the
+old engine's `TurnOrder.nextActive` looks for a seat that can act, finds none, and
+loops forever. The game freezes. The new engine fails loudly instead.
+
+The old engine is what the console, the desktop and the Android apps run today, so
+this is a defect in the shipped product, not only in the code being replaced. It is
+recorded as its own task (T19) rather than folded into the migration.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
