@@ -215,6 +215,37 @@ recorded as its own task (T19) rather than folded into the migration.
   a flag, and it names the seat by its trump suit where the new events carry the
   `Seat`. The old `AwaitingHumanInput` has no counterpart and is filtered out.
 
+### What T7 established
+
+- **The gate is green: 50,000 seeds compared, not one divergence**, and the four
+  pathological seeds hit the bound at the same point, with the same loser and the same
+  number of card events.
+- The gate found a real defect in the new engine, and that is what it is for. The
+  trick and the round end skipped the turn of a dealer that holds no cards, so the
+  new engine played a card in a round the old engine ends at once — 14 of the first
+  200 seeds diverged. `Trick.beginRound` now ends that round the way the old engine
+  does, and counts the empty turn, which is what keeps the counter aligned.
+- A round that begins with a single seat holding cards now ends at once, and the round
+  after it may end the same way.
+- Where the two engines still differ: when **no** seat holds cards, the new engine
+  fails loudly and the old one hangs (the T19 defect). The new engine deliberately
+  does not reproduce the hang.
+- The gate's helpers live in the `engine` module's test sources: `OldEngine`,
+  `NewEngine`, `RulePolicy`, `Trace`, `ScriptedLayout`, and the test
+  `testImplementation(project(":core"))` — the only place the new engine is allowed
+  to see the old one. Both go away in T17.
+- `RulePolicy` is the reference implementation of the rule bot for T9: the lead is the
+  first hand card that minimises (is-trump, rank), keeping the first of the equal
+  minima; the defence is the first legal move, and the engine already lists the
+  defences sorted by (is-trump, rank) with a stable sort. Use the rank **ordinal** on
+  the new side; the old `getValue()` is the ordinal plus two.
+- The old scripted dealer could give a seat a different number of cards, and the new
+  engine deals a deck, so the ported scenarios use layouts where every seat holds
+  eight. One scenario could not be carried over at all — the old scripted dealer never
+  shuffles the pool between rounds, so the old scripted game is not a game the new
+  engine can play — and it plays the seeded game both engines play instead, freezing
+  the old engine's winner for seed 42.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
