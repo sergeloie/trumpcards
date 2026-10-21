@@ -15,7 +15,7 @@ import java.util.List;
 final class Trick {
 
     /** The bound on the turns of one round. */
-    private static final int MAX_ROUND_TURNS = 10_000;
+    static final int MAX_ROUND_TURNS = 10_000;
 
     private Trick() {
     }
