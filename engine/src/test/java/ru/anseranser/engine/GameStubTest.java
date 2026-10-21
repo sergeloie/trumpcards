@@ -20,11 +20,6 @@ class GameStubTest {
     }
 
     @Test
-    void startIsNotWrittenYet() {
-        assertThrows(UnsupportedOperationException.class, () -> Game.start(setup()));
-    }
-
-    @Test
     void stepIsNotWrittenYet() {
         assertThrows(UnsupportedOperationException.class, () -> Game.step(state(), 0));
     }
@@ -38,10 +33,6 @@ class GameStubTest {
         assertEquals(3, publicMethods.size());
         assertEquals(Set.of("start", "legalMoves", "step"),
                 publicMethods.stream().map(Method::getName).collect(Collectors.toSet()));
-    }
-
-    private static Setup setup() {
-        return new Setup(RankSet.SIX_TO_ACE, List.of(Card.Suit.SPADES, Card.Suit.HEARTS), 42L);
     }
 
     private static State state() {

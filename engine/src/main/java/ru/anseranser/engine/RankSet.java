@@ -29,4 +29,9 @@ public enum RankSet {
         Card.Rank[] all = Card.Rank.values();
         return List.of(all).subList(baseRank.ordinal(), all.length);
     }
+
+    /** The number of cards in a game of {@code seats} seats, base cards included. */
+    public int cardCount(int seats) {
+        return ranks().size() * seats;
+    }
 }

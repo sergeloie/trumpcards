@@ -14,13 +14,15 @@ public final class Game {
     }
 
     /**
-     * The first state of a game and what happened on the way: the deal and the
-     * obligatory exchange.
+     * The first state of a game: the deck is built from the suits in play, the
+     * base card of every suit goes on the board of the seat that owns it, and
+     * the rest is dealt.
      *
-     * @throws UnsupportedOperationException until the rules are written
+     * <p>The obligatory exchange is not part of it yet, so the transition
+     * reports no events.
      */
     public static Transition start(Setup setup) {
-        throw new UnsupportedOperationException("the rules are not written yet");
+        return new Transition(Dealing.deal(setup), List.of());
     }
 
     /**
