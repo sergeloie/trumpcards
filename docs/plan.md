@@ -114,6 +114,34 @@ Two traps that the next tasks inherit:
     variants are new behaviour, defined by the rules and by ADR 0005, with no old
     implementation to compare against.
 
+### What T3 established
+
+- `Exchange` is a package-private rule; `Game.start` applies it after the deal and
+  returns the state after the exchange.
+- **A board is a list ordered bottom-up.** The top of the ladder is its **last**
+  element. A card pushed onto a board in T5 must be **appended**, or the required rank
+  will be computed from the wrong card.
+- The exchange is idempotent — applying it twice changes nothing — so "once per round"
+  is not observable in the returned state. The round setup must call it exactly once.
+- `State.dealer` and `State.turn` hold `Seat` **values**. Every rule that rebuilds the
+  seats must re-point them at the new instances; a stale reference silently keeps the
+  old hand.
+- The state does not carry the rank set, and it does not need to: the rank a board
+  requires next is the rank after the top of the board, and over the whole rank enum
+  that is the same answer the rank set gives, because the sets are contiguous. The
+  exchange's rank-set parameter goes away with T5.
+
+### The contract of the loop
+
+`legalMoves(state)` is empty **only when the game is over**. A round that ends is
+resolved inside the step that ended it: the loser's card goes onto the board, the
+cards return to the deck, the next round is dealt and the exchange runs — all in one
+step, with the events reporting what happened. The harness never sees an intermediate
+"the round is over" state, and it never has to ask whether the round or the game ended.
+
+This is why the round end (T5) is built **before** the trick (T4): the step needs
+something to call when the last card of the round is played.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
