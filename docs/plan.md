@@ -246,6 +246,25 @@ recorded as its own task (T19) rather than folded into the migration.
   engine can play — and it plays the seeded game both engines play instead, freezing
   the old engine's winner for seed 42.
 
+### What T8 established
+
+- The invariants hold over **60,000 games**: card conservation at every step of every
+  game (not only at the end), exactly one winner, termination, and reproducibility of
+  the whole final state from the seed. The two- and three-seat tables are checked
+  against the rules and ADR 0005, since the old engine has no behaviour for them.
+- Exactly **four of 50,000** games hit the safety bound — the same four seeds the old
+  engine has — and the detection is exact, neither over- nor under-reporting.
+- **The new engine is about three times slower than the old one**: 72 s against 26 s
+  for 50,000 games, because every step copies immutable lists into a new state. A
+  whole game takes about 1.5 ms, which is nothing next to a game a person plays, so
+  the price is paid knowingly.
+- The safety bound has to be *nameable* for the tools to report honestly which rounds
+  hit it. `Trick.MAX_ROUND_TURNS` is package-private today; it becomes a public
+  constant on `Game` before `tools/verify` needs it. A constant, not a method — the
+  engine's public surface stays three methods.
+- `EngineSimulator` lives in the engine's test sources today; it moves with `bots` in
+  T9, or `tools/verify` takes it over.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
