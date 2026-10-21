@@ -122,8 +122,8 @@ class EventsTest {
 
     @Test
     void aStepThatEndsTheRoundReportsTheRoundEndAndTheRoundThatFollowsIt() {
-        Seat spades = seat(SPADES, List.of(card(SPADES, SEVEN), card(HEARTS, SEVEN)));
-        Seat clubs = seat(CLUBS, List.of());
+        Seat spades = seat(SPADES, List.of(card(SPADES, SEVEN)));
+        Seat clubs = seat(CLUBS, List.of(card(CLUBS, SEVEN), card(CLUBS, NINE)));
         Seat diamonds = seat(DIAMONDS, List.of());
         Seat hearts = seat(HEARTS, List.of());
 
@@ -132,7 +132,36 @@ class EventsTest {
 
         assertEquals(List.of(
                 new Event.CardPlayed(
-                        new Seat(SPADES, List.of(card(HEARTS, SEVEN)), List.of(card(SPADES, SIX)), false),
+                        new Seat(SPADES, List.of(), List.of(card(SPADES, SIX)), false),
+                        card(SPADES, SEVEN)),
+                new Event.RoundEnded(
+                        new Seat(CLUBS, List.of(), List.of(card(CLUBS, SIX), card(CLUBS, SEVEN)), false),
+                        Optional.of(card(CLUBS, SEVEN))),
+                new Event.RoundStarted(
+                        new Seat(CLUBS, List.of(), List.of(card(CLUBS, SIX), card(CLUBS, SEVEN)), false)),
+                new Event.CardsDealt(
+                        new Seat(DIAMONDS, List.of(card(CLUBS, NINE)), List.of(card(DIAMONDS, SIX)), false),
+                        List.of(card(CLUBS, NINE))),
+                new Event.CardsDealt(
+                        new Seat(HEARTS, List.of(card(SPADES, SEVEN)), List.of(card(HEARTS, SIX)), false),
+                        List.of(card(SPADES, SEVEN))),
+                new Event.CardsExchanged(
+                        new Seat(HEARTS, List.of(), List.of(card(HEARTS, SIX)), false),
+                        new Seat(SPADES, List.of(card(SPADES, SEVEN)), List.of(card(SPADES, SIX)), false),
+                        card(SPADES, SEVEN))),
+                transition.events());
+    }
+
+    @Test
+    void aRoundThatBeginsWithOneSeatHoldingCardsEndsAtOnce() {
+        Seat spades = seat(SPADES, List.of(card(SPADES, SEVEN), card(SPADES, ACE)));
+        Seat hearts = seat(HEARTS, List.of());
+
+        Transition transition = Game.step(state(List.of(spades, hearts), List.of(), spades, false, 0), 0);
+
+        assertEquals(List.of(
+                new Event.CardPlayed(
+                        new Seat(SPADES, List.of(card(SPADES, ACE)), List.of(card(SPADES, SIX)), false),
                         card(SPADES, SEVEN)),
                 new Event.RoundEnded(
                         new Seat(SPADES, List.of(), List.of(card(SPADES, SIX), card(SPADES, SEVEN)), false),
@@ -140,12 +169,15 @@ class EventsTest {
                 new Event.RoundStarted(
                         new Seat(SPADES, List.of(), List.of(card(SPADES, SIX), card(SPADES, SEVEN)), false)),
                 new Event.CardsDealt(
-                        new Seat(CLUBS, List.of(card(HEARTS, SEVEN)), List.of(card(CLUBS, SIX)), false),
-                        List.of(card(HEARTS, SEVEN))),
-                new Event.CardsExchanged(
-                        new Seat(CLUBS, List.of(), List.of(card(CLUBS, SIX)), false),
-                        new Seat(HEARTS, List.of(card(HEARTS, SEVEN)), List.of(card(HEARTS, SIX)), false),
-                        card(HEARTS, SEVEN))),
+                        new Seat(HEARTS, List.of(card(SPADES, ACE)), List.of(card(HEARTS, SIX)), false),
+                        List.of(card(SPADES, ACE))),
+                new Event.RoundEnded(
+                        new Seat(HEARTS, List.of(), List.of(card(HEARTS, SIX)), true),
+                        Optional.empty()),
+                new Event.SeatEliminated(
+                        new Seat(HEARTS, List.of(), List.of(card(HEARTS, SIX)), true)),
+                new Event.GameEnded(
+                        new Seat(SPADES, List.of(), List.of(card(SPADES, SIX), card(SPADES, SEVEN)), false))),
                 transition.events());
     }
 

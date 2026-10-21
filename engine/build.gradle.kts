@@ -7,6 +7,9 @@ plugins {
 
 dependencies {
     testImplementation(libs.junit.jupiter)
+    // The golden gate compares the new engine with the old one. The old engine
+    // is visible to the tests only; the main classpath stays empty.
+    testImplementation(project(":core"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

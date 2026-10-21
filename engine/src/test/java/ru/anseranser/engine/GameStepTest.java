@@ -104,17 +104,19 @@ class GameStepTest {
     @Test
     void aStepThatEndsTheRoundResolvesItAndDealsTheNextOne() {
         Seat spades = seat(SPADES, List.of(card(SPADES, SEVEN)));
-        Seat clubs = seat(CLUBS, List.of(card(CLUBS, SEVEN)));
+        Seat clubs = seat(CLUBS, List.of(card(CLUBS, SEVEN), card(CLUBS, NINE)));
+        Seat diamonds = seat(DIAMONDS, List.of());
+        Seat hearts = seat(HEARTS, List.of());
 
-        State stepped = Game.step(state(List.of(spades, clubs),
+        State stepped = Game.step(state(List.of(spades, clubs, diamonds, hearts),
                 List.of(), spades, false, 0), 0).state();
 
         assertEquals(List.of(card(CLUBS, SIX), card(CLUBS, SEVEN)),
                 stepped.seats().get(1).board(), "the seat that still holds cards loses the round");
         assertEquals(List.of(), stepped.deck(), "the cards that came back are dealt again");
         assertEquals(List.of(), stepped.pot());
-        assertEquals(0, stepped.turns(), "the counter of the new round starts at zero");
-        assertSame(stepped.seats().get(0), stepped.turn(),
+        assertEquals(1, stepped.turns(), "the turn of the dealer that holds no card is over");
+        assertSame(stepped.seats().get(2), stepped.turn(),
                 "the dealer of the new round holds no card, the turn goes to the seat that can act");
     }
 

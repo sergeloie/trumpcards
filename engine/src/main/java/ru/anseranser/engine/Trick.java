@@ -113,7 +113,7 @@ final class Trick {
             Transition end = EndRound.apply(advanced);
             List<Event> all = new ArrayList<>(events);
             all.addAll(end.events());
-            return new Transition(withTurnOnASeatThatCanAct(end).state(), all);
+            return beginRound(end, all);
         }
         return new Transition(advanced, events);
     }
@@ -131,18 +131,28 @@ final class Trick {
     }
 
     /**
-     * The transition with the turn on a seat that can act: the dealer of the
-     * next round may hold no card at all.
+     * The round that has just been dealt: the turn of a dealer that holds no
+     * card is over before it begins, and it counts as a turn of the round.
+     *
+     * <p>A round that begins with a single seat holding cards ends at once,
+     * and the round that follows may end the same way.
      */
-    static Transition withTurnOnASeatThatCanAct(Transition transition) {
-        State state = transition.state();
-        if (Seats.countInGame(state.seats()) <= 1 || !state.turn().hand().isEmpty()) {
-            return transition;
+    private static Transition beginRound(Transition dealt, List<Event> events) {
+        State state = dealt.state();
+        if (!state.turn().hand().isEmpty() || Seats.countInGame(state.seats()) <= 1) {
+            return new Transition(state, events);
         }
         List<Seat> seats = state.seats();
-        int turnIndex = seats.indexOf(state.turn());
+        int turnIndex = Seats.indexOfTrump(seats, state.turn().trump());
         Seat next = seats.get(Seats.nextWithCards(seats, turnIndex));
-        return new Transition(new State(seats, state.pot(), state.deck(), state.dealer(), next,
-                false, state.turns(), state.rngState()), transition.events());
+        int turns = state.turns() + 1;
+        State advanced = new State(seats, state.pot(), state.deck(), state.dealer(), next,
+                false, turns, state.rngState());
+        if (Seats.countWithCards(seats) > 1) {
+            return new Transition(advanced, events);
+        }
+        Transition end = EndRound.apply(advanced);
+        events.addAll(end.events());
+        return beginRound(end, events);
     }
 }
