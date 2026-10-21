@@ -1,6 +1,7 @@
 package ru.anseranser.ml;
 
 import ru.anseranser.engine.Card;
+import ru.anseranser.engine.Ladders;
 import ru.anseranser.engine.Move;
 import ru.anseranser.engine.Seat;
 import ru.anseranser.engine.State;
@@ -73,7 +74,7 @@ public record Observation(
                 boards.add(new Board(suit, null, false));
                 continue;
             }
-            Card.Rank required = requiredRank(owner.board());
+            Card.Rank required = Ladders.nextRequiredRank(owner.board());
             boards.add(new Board(suit, required, !owner.board().isEmpty() && required == null));
         }
 
@@ -106,19 +107,5 @@ public record Observation(
     /** The distance in seats from the observer to the seat. */
     private static int offset(List<Seat> seats, Seat seat, int observer, int seatCount) {
         return (indexOf(seats, seat) - observer + seatCount) % seatCount;
-    }
-
-    /**
-     * The rank the board requires next: the one after the top of the ladder,
-     * and none when the ladder is complete. The engine applies the same rule
-     * to the ladder it keeps to itself.
-     */
-    private static Card.Rank requiredRank(List<Card> board) {
-        if (board.isEmpty()) {
-            return null;
-        }
-        Card.Rank[] ranks = Card.Rank.values();
-        int next = board.get(board.size() - 1).rank().ordinal() + 1;
-        return next >= ranks.length ? null : ranks[next];
     }
 }

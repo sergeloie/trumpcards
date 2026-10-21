@@ -4,8 +4,12 @@ import java.util.List;
 
 /**
  * The ladder of trump cards on a board: the rank it requires next.
+ *
+ * <p>The ladder is public because the observation of a learned policy needs
+ * the rank a board requires next, and the rules keep the rest of the board to
+ * themselves.
  */
-final class Ladders {
+public final class Ladders {
 
     private Ladders() {
     }
@@ -14,7 +18,7 @@ final class Ladders {
      * The rank the board requires next: the one after the top of the board.
      * It is absent when the ladder is complete.
      */
-    static Card.Rank nextRequiredRank(List<Card> board) {
+    public static Card.Rank nextRequiredRank(List<Card> board) {
         if (board.isEmpty()) {
             return null;
         }

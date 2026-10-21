@@ -89,29 +89,46 @@ class VectorTest {
     }
 
     @Test
-    void theMaskHoldsTheLegalMoves() {
+    void theMaskHoldsTheLegalCards() {
         List<Move> moves = Game.legalMoves(state());
 
         Vector vector = vector(state());
 
         assertEquals(2, moves.size(), "the observer may play either card of its hand");
-        assertEquals(0b11L, vector.mask(), "the mask holds a bit for every legal move");
+        assertEquals((1L << 5) | (1L << 20), vector.mask(),
+                "the mask holds a bit for the seven of spades and for the nine of clubs");
+        assertEquals(0L, vector.mask() & (1L << 52), "taking the pot is not legal");
         assertEquals(2f, vector.values()[LEGAL_MOVES], "the vector holds the number of legal moves");
     }
 
     @Test
-    void theMaskOfAMoveThatIsNotLegalIsEmpty() {
-        State state = new State(seats(), List.of(card(SPADES, ACE)), List.of(),
-                clubs(), spades(), false, 0, 42L);
+    void theMaskHoldsOnlyTheCardsThatCanBePlayed() {
+        State state = defenceState();
 
         Vector vector = vector(state);
 
-        assertEquals(1L, vector.mask(), "nothing beats the ace, so the only move is to take the pot");
+        assertEquals(2, Game.legalMoves(state).size(), "the two trumps beat the ten of hearts");
+        assertEquals((1L << 5) | (1L << 12), vector.mask(),
+                "the mask holds a bit for the seven of spades and for the ace of spades");
+        assertEquals(0L, vector.mask() & (1L << 20),
+                "the nine of clubs is in the hand, but it cannot beat the ten of hearts");
+    }
+
+    @Test
+    void theMaskHoldsTakingThePot() {
+        State state = takePotState();
+
+        Vector vector = vector(state);
+
+        assertEquals(1, Game.legalMoves(state).size(), "nothing beats the ace of spades");
+        assertEquals(1L << 52, vector.mask(), "the only action is to take the pot");
+        assertEquals(0L, vector.mask() & (1L << 5), "the seven of spades cannot be played");
     }
 
     @Test
     void theLayoutIsPinned() {
-        float[] values = vector(state()).values();
+        Vector vector = vector(state());
+        float[] values = vector.values();
 
         assertValue(1f, values, HAND + 15, "the seven of spades is in the hand");
         assertValue(6f, values, HAND + 16, "the rank of the seven of spades");
@@ -151,10 +168,13 @@ class VectorTest {
         assertValue(4f, values, TABLE + 12, "four seats sit at the table");
 
         assertValue(2f, values, LEGAL_MOVES, "the observer has two legal moves");
+
+        assertEquals((1L << 5) | (1L << 20), vector.mask(),
+                "the mask names the legal cards, in the order of the hand block");
     }
 
     @Test
-    void theMaskHoldsEveryMoveOfAGame() {
+    void theMaskHoldsEveryLegalActionOfAGame() {
         State state = Game.start(new Setup(RankSet.SIX_TO_ACE,
                 List.of(SPADES, CLUBS, DIAMONDS, HEARTS), 7L)).state();
         int steps = 0;
@@ -166,9 +186,10 @@ class VectorTest {
             }
             Vector vector = Vector.of(state, state.turn(), moves);
 
-            assertTrue(moves.size() <= 52, "the legal moves are bounded by the deck");
-            assertTrue(moves.size() <= Vector.MASK_BITS, "the mask is wide enough for them");
-            assertEquals((1L << moves.size()) - 1, vector.mask());
+            assertEquals(expectedMask(moves), vector.mask(), "the mask names the legal actions");
+            assertEquals(moves.size(), Long.bitCount(vector.mask()),
+                    "every legal action has a bit of its own");
+            assertEquals(0L, vector.mask() >>> 53, "no bit above taking the pot is ever set");
             assertEquals(Vector.LENGTH, vector.values().length, "the vector keeps its length");
 
             state = Game.step(state, steps % moves.size()).state();
@@ -199,6 +220,24 @@ class VectorTest {
         assertEquals(expected, values[index], 0f, message + " (at " + index + ")");
     }
 
+    /** The mask the moves describe: a bit for every legal card, and one for taking the pot. */
+    private static long expectedMask(List<Move> moves) {
+        long mask = 0;
+        for (Move move : moves) {
+            if (move instanceof Move.Play play) {
+                mask |= 1L << cardIndex(play.card());
+            } else {
+                mask |= 1L << 52;
+            }
+        }
+        return mask;
+    }
+
+    /** The bit of a card: the suits in the canonical order, the ranks ascending. */
+    private static int cardIndex(Card card) {
+        return card.suit().ordinal() * 13 + card.rank().ordinal();
+    }
+
     private static Vector vector(State state) {
         return Vector.of(state, state.turn(), Game.legalMoves(state));
     }
@@ -207,6 +246,20 @@ class VectorTest {
     private static State state() {
         return new State(seats(), List.of(card(HEARTS, TEN)), List.of(), clubs(), spades(),
                 true, 0, 42L);
+    }
+
+    /** A table where the observer defends the ten of hearts with the trumps that beat it. */
+    private static State defenceState() {
+        Seat observer = new Seat(SPADES, List.of(card(SPADES, SEVEN), card(CLUBS, NINE),
+                card(SPADES, ACE)), List.of(card(SPADES, SIX)), false);
+        return new State(List.of(observer, clubs(), diamonds(), hearts()),
+                List.of(card(HEARTS, TEN)), List.of(), clubs(), observer, false, 0, 42L);
+    }
+
+    /** A table where nothing beats the ace of spades, so the pot is taken. */
+    private static State takePotState() {
+        return new State(seats(), List.of(card(SPADES, ACE)), List.of(),
+                clubs(), spades(), false, 0, 42L);
     }
 
     private static State stateWith(Seat clubs) {

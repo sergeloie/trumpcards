@@ -10,7 +10,8 @@ import java.util.List;
 
 /**
  * The numbers a learned policy reads: a fixed number of values that describe
- * the table to the seat that is about to move, and a mask over the legal moves.
+ * the table to the seat that is about to move, and a mask over the actions the
+ * policy may choose.
  *
  * <p>The vector holds {@value #LENGTH} values, in this order:
  *
@@ -36,20 +37,27 @@ import java.util.List;
  * <p>A rank is held as its ordinal plus one, so a zero means that there is no
  * rank: the card is not in the hand, or the board requires nothing.
  *
- * <p>The mask holds a bit for every move of the list, so a policy can take the
- * maximum over the legal moves alone. There is one legal move for every card
- * of the observer's hand, or the single move to take the pot, so the number of
- * legal moves is at most the size of a hand, and a hand holds at most the
- * cards of the full deck, so {@value #MASK_BITS} bits are enough.
+ * <p>The mask is a long over the actions a policy chooses among: the cards of
+ * the full deck, and taking the pot. Bit {@code suit.ordinal() * 13 +
+ * rank.ordinal()} is set when that card is among the legal moves, bit
+ * {@value #TAKE_POT} is set when taking the pot is legal, and the bits above
+ * it are never set. The mask lines up with the hand block, so a policy reads a
+ * score per card and takes the maximum over the cards the mask allows.
+ *
+ * <p>The observation is the seat that is about to move, so the legal moves
+ * play the observer's own cards.
  */
 public record Vector(float[] values, long mask) {
-
-    /** The number of bits in the mask. */
-    public static final int MASK_BITS = 64;
 
     private static final int RANKS = Card.Rank.values().length;
     private static final int CARDS = Card.Suit.values().length * RANKS;
     private static final int SUIT_VALUES = Card.Suit.values().length;
+
+    /** The number of actions a policy chooses among: every card, and taking the pot. */
+    public static final int ACTIONS = CARDS + 1;
+
+    /** The action that takes the pot. */
+    public static final int TAKE_POT = CARDS;
 
     private static final int CARD_VALUES = 3;
     private static final int CARD_IN_HAND = 0;
@@ -89,17 +97,13 @@ public record Vector(float[] values, long mask) {
     }
 
     /**
-     * The vector of the state as the seat sees it, and the mask over the legal
-     * moves.
+     * The vector of the state as the seat sees it, and the mask over the
+     * actions the policy may choose. The seat is the one that is about to
+     * move, and the legal moves are that seat's own.
      *
-     * @throws IllegalArgumentException when the seat is not at the table, or
-     *         when there are more legal moves than the mask holds
+     * @throws IllegalArgumentException when the seat is not at the table
      */
     public static Vector of(State state, Seat seat, List<Move> moves) {
-        if (moves.size() > MASK_BITS) {
-            throw new IllegalArgumentException("a mask of " + MASK_BITS + " bits holds "
-                    + moves.size() + " moves at most");
-        }
         Observation observation = Observation.of(state, seat, moves);
         float[] values = new float[LENGTH];
         writeCards(values, HAND, observation.hand(), observation.trump());
@@ -108,7 +112,7 @@ public record Vector(float[] values, long mask) {
         writeBoards(values, observation);
         writeTable(values, observation);
         values[LEGAL_MOVES] = observation.legalMoveCount();
-        return new Vector(values, mask(moves.size()));
+        return new Vector(values, mask(moves));
     }
 
     @Override
@@ -175,8 +179,16 @@ public record Vector(float[] values, long mask) {
         values[SEAT_COUNT] = observation.seatCount();
     }
 
-    /** The mask: a bit for every legal move. */
-    private static long mask(int moves) {
-        return moves >= MASK_BITS ? -1L : (1L << moves) - 1;
+    /** The mask: a bit for every legal card, and one for taking the pot. */
+    private static long mask(List<Move> moves) {
+        long mask = 0;
+        for (Move move : moves) {
+            if (move instanceof Move.Play play) {
+                mask |= 1L << cardIndex(play.card());
+            } else {
+                mask |= 1L << TAKE_POT;
+            }
+        }
+        return mask;
     }
 }
