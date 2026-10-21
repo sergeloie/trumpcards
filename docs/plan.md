@@ -142,6 +142,31 @@ step, with the events reporting what happened. The harness never sees an interme
 This is why the round end (T5) is built **before** the trick (T4): the step needs
 something to call when the last card of the round is played.
 
+### What T5 established
+
+- `EndRound.apply(State)` resolves a finished round in one call and returns a **state**,
+  not a transition: the loser's card onto its board, the elimination, the cards back
+  into the deck, the next dealer, the next round dealt and the exchange run — or the
+  game-over state. `EndRound.resolve(State)` stops after the resolution.
+- **One rule picks the loser**: the seat holding the most cards, ties broken by the
+  seating order. When exactly one seat holds cards that is the seat the old engine
+  picks, and when several do it is the old engine's capped-round answer — so the trick
+  needs no flag for a capped round.
+- A seat is eliminated when the card pushed onto its board is the ace **or** when the
+  pile holds no trump of its suit at all, because its ladder is then complete.
+- The next round is dealt from the cards that came back, **on top of the hands that
+  are left**, skipping the eliminated seats, starting at the seat to the left of the
+  dealer, and continuing the same generator stream.
+- `Exchange.apply(State)` no longer takes a rank set; `Ladders.nextRequiredRank`
+  computes it over the whole rank enum, as the old `Scoreboard` does. `Seats` holds
+  the seating queries.
+- The trick (T4) adds two fields to `State` — the "must lead" flag and the round's
+  turn counter — and every `new State(...)` in the engine then has to carry them:
+  `Dealing`, `Exchange` and `EndRound`.
+- For the events (T6): a rule that returns only a state leaves the events to be
+  derived — the loser is the seat whose board grew, and the pushed card is the last
+  card of that board. T6 either derives them that way or widens the seam.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
