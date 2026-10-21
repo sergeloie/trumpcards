@@ -14,6 +14,7 @@ dependencyResolutionManagement {
 rootProject.name = "trumpcards"
 include("core")
 include("engine")
+include("bots")
 include("console")
 include("desktop-libgdx")
 include("android")

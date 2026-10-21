@@ -1,5 +1,7 @@
 package ru.anseranser.engine;
 
+import ru.anseranser.bots.RuleBot;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,8 @@ import java.util.List;
  * behind: the cards in play, the surviving seat, the rounds the game took and
  * the rounds that hit the safety bound.
  *
- * <p>The seats are played by the rule policy of {@link RulePolicy}, the one the
- * golden gate drives the engine with, so the games are the games the old
+ * <p>The seats are played by the rule bot of the {@code bots} module, the one
+ * the golden gate drives the engine with, so the games are the games the old
  * engine plays.
  */
 final class EngineSimulator {
@@ -112,7 +114,7 @@ final class EngineSimulator {
             if (moves.isEmpty()) {
                 break;
             }
-            Transition transition = Game.step(state, RulePolicy.choose(state, moves));
+            Transition transition = Game.step(state, RuleBot.choose(state, moves));
             state = transition.state();
             rounds += roundsStarted(transition.events());
             step++;

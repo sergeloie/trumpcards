@@ -1,6 +1,7 @@
 package ru.anseranser.engine;
 
 import org.junit.jupiter.api.Test;
+import ru.anseranser.bots.RuleBot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -117,7 +118,7 @@ class GoldenScenarioTest {
         List<Event> events = new ArrayList<>();
         while (ofType(events, Event.RoundEnded.class).isEmpty()) {
             List<Move> moves = Game.legalMoves(state);
-            Transition transition = Game.step(state, RulePolicy.choose(state, moves));
+            Transition transition = Game.step(state, RuleBot.choose(state, moves));
             events.addAll(transition.events());
             state = transition.state();
         }
@@ -143,7 +144,7 @@ class GoldenScenarioTest {
         State state = start.state();
         while (!Game.legalMoves(state).isEmpty()) {
             List<Move> moves = Game.legalMoves(state);
-            Transition transition = Game.step(state, RulePolicy.choose(state, moves));
+            Transition transition = Game.step(state, RuleBot.choose(state, moves));
             events.addAll(transition.events());
             state = transition.state();
         }
@@ -215,12 +216,26 @@ class GoldenScenarioTest {
         List<Event> events = new ArrayList<>();
         for (int step = 0; step < steps; step++) {
             List<Move> moves = Game.legalMoves(state);
-            Transition transition = Game.step(state,
-                    RulePolicy.chooseWithPinnedLead(state, moves, pinnedLead));
+            Transition transition = Game.step(state, choosePinnedLead(state, moves, pinnedLead));
             events.addAll(transition.events());
             state = transition.state();
         }
         return events;
+    }
+
+    /**
+     * The move the scenario plays: the pinned card when the seat to move leads,
+     * and the rule bot's move in every other case.
+     */
+    private static int choosePinnedLead(State state, List<Move> moves, Card pinned) {
+        if (state.leadRequired() || state.pot().isEmpty()) {
+            for (int i = 0; i < moves.size(); i++) {
+                if (((Move.Play) moves.get(i)).card().equals(pinned)) {
+                    return i;
+                }
+            }
+        }
+        return RuleBot.choose(state, moves);
     }
 
     /** Whether the seat that lost the round left the game with it. */

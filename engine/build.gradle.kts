@@ -10,6 +10,12 @@ dependencies {
     // The golden gate compares the new engine with the old one. The old engine
     // is visible to the tests only; the main classpath stays empty.
     testImplementation(project(":core"))
+    // The gate drives the new engine with the rule bot of the :bots module.
+    // The two modules depend on each other in the test scope only: the bot
+    // needs the engine's types, the gate needs the bot. The task graph stays
+    // acyclic, because :engine:compileTestJava needs :bots:jar, and :bots:jar
+    // needs :engine:jar.
+    testImplementation(project(":bots"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
