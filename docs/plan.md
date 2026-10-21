@@ -265,6 +265,30 @@ recorded as its own task (T19) rather than folded into the migration.
 - `EngineSimulator` lives in the engine's test sources today; it moves with `bots` in
   T9, or `tools/verify` takes it over.
 
+### What T9 and T10 established
+
+- **`bots` is a module of its own** with `RuleBot.choose(state, moves)`: a lead takes
+  the first hand card that minimises (is-trump, rank) and keeps the first of the equal
+  minima, a defence takes the first legal move. The golden gate now drives the real
+  bot on the new side, and stays green over 50,000 seeds.
+- The engine's tests depend on `bots` **for the test classpath only**. Gradle accepts
+  the project cycle because the task graph stays acyclic; the engine's main classpath
+  is still empty.
+- **`ml` is a module of its own** with `Observation` (the table as the seat to move sees
+  it) and `Vector.of(state, seat, moves)`: 352 floats of a fixed length, plus a mask.
+- **The mask is a mask over cards, not over positions in the legal-moves list.** Bit
+  `suit.ordinal() * 13 + rank.ordinal()` is set when that card is legal, bit 52 when
+  taking the pot is legal. The engine's list is in the hand's order for a lead and
+  sorted for a defence, and the vector does not carry the hand's order — so a mask
+  over positions would have left the model unable to tell which card a slot meant.
+  The action space is therefore 53 wide: 52 cards and taking the pot, and the adapter
+  turns the chosen action into the index the engine wants.
+- The engine's `Ladders` became public so that `ml` does not keep a second copy of
+  the rule "the rank a board requires next". The engine's public surface is still
+  `Game` with three methods, plus that one class.
+- The vector does not encode the rank set, so a model trained on the 36-card deck does
+  not serve the 52-card one.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
