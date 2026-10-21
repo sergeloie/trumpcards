@@ -24,19 +24,55 @@ which is not touched until the front ends are switched. Two gates protect the mo
 The old module is deleted only after every front end runs on the new engine and the
 golden gate is green.
 
-### Two details that will silently break the golden gate
+### Bit-for-bit requirements
 
-- **The round's safety bound counts turns, not decisions.** In the old engine a turn may
-  play two cards (beat, then lead) and still counts once. The new engine takes one
-  decision per step, so the counter must be incremented where the old one was — when a
-  turn ends: after a lead, after taking the pot, and after a defence that emptied the
-  hand. If it counts steps instead, the bound fires at a different point and the four
-  pathological seeds (12129, 24847, 30649, 49128) produce different games.
-- **The policy must be the same policy.** The old `AiDecisionStrategy` picks the
-  weakest non-trump to lead and the first of the sorted legal defences, and the sort is
-  stable, so the hand's order matters. The new `RuleBot` must reproduce it exactly, and
-  the deck must be dealt in the same order, or the logs diverge for reasons that have
-  nothing to do with the rules.
+The golden gate compares the old engine and the new engine move by move. The old
+engine's behaviour is observable in ways that are not written down anywhere, and each of
+them is enough to make the gate fail for a reason that has nothing to do with the rules.
+These are the facts the new engine has to reproduce.
+
+1. **The order of the random draws.** The old engine takes the base cards in the
+   constructor (no draw), draws once in `startGame()` to pick the first dealer, and only
+   then shuffles. The new `start(setup)` must consume the draws in the same order:
+   first dealer, then shuffle. Shuffling before choosing the dealer shifts the whole
+   stream.
+2. **The deck is built in the canonical suit order.** The old `Dealer` builds the deck
+   by iterating `Card.Suit.values()` and, within each suit, the ranks ascending. The
+   seats are in seating order, but the *deck* is not built in the order the seats are
+   listed. The new engine must build the deck in the canonical suit order whatever
+   order the setup lists the trumps in, and the gate's setup must list the trumps in
+   the canonical order too.
+3. **The order of the cards in a hand is observable.** Cards are dealt one at a time
+   from the seat to the left of the dealer, in seating order, and the cards passed in
+   the exchange are *appended* to the receiver's hand. The rule bot's lead is the first
+   card of the hand that minimises (is-trump, rank), so two cards of the same rank in
+   different suits are told apart by their position in the hand. Deal order and
+   exchange order are part of the behaviour.
+4. **The order of the legal moves is observable.** The old engine lists the defences
+   sorted by (is-trump, rank) with a stable sort, and the rule bot takes the first of
+   them. The new engine must list the legal moves in that order for a defence, and in
+   the hand's order for a lead, so that "take the first" reproduces the old choice.
+5. **The safety bound counts turns, not decisions.** In the old engine a turn may play
+   two cards (beat, then lead) and still counts once. The new engine takes one decision
+   per step, so the counter must be incremented where the old one was — when a turn
+   ends: after a lead, after taking the pot, and after a defence that emptied the
+   hand. If it counts steps instead, the bound fires at a different point and the four
+   pathological seeds (12129, 24847, 30649, 49128) produce different games.
+6. **The gate compares events, not steps.** The old engine has no steps; its trace is
+   its event stream (card played, card beaten, pot taken, round started, round ended,
+   game ended), each naming the seat by its trump suit. The new engine's events must
+   carry the same information, so the two traces can be compared one to one.
+
+Everything above is read off the old implementation, not invented. The generator is
+ported verbatim — the same SplitMix64 constants and the same rejection sampling — not
+re-implemented.
+
+### The new engine's package
+
+The new module is `engine` and its package is `ru.anseranser.engine`: the public value
+types and the package-private rule classes side by side, the way the old module keeps
+`RoundResolver` next to `Game`. In T17 the *module* takes the name `core`; the package
+is not renamed, so no front end's imports change.
 
 ## Wave 1 — the engine (sequential)
 
