@@ -15,6 +15,7 @@ rootProject.name = "trumpcards"
 include("core")
 include("engine")
 include("bots")
+include("ml")
 include("console")
 include("desktop-libgdx")
 include("android")
