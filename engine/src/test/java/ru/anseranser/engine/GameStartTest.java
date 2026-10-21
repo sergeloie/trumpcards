@@ -36,7 +36,8 @@ class GameStartTest {
         assertEquals(36, cardsInPlay(state));
         assertEquals(4, cardsOnBoards(state));
         assertEquals(32, cardsInHands(state));
-        assertEquals(List.of(8, 8, 8, 8), state.seats().stream().map(seat -> seat.hand().size()).toList());
+        assertEquals(List.of(7, 9, 9, 7), state.seats().stream().map(seat -> seat.hand().size()).toList(),
+                "the obligatory exchange moves a card from one seat to another");
     }
 
     @Test
@@ -47,7 +48,8 @@ class GameStartTest {
         assertEquals(18, cardsInPlay(state));
         assertEquals(2, cardsOnBoards(state));
         assertEquals(16, cardsInHands(state));
-        assertEquals(List.of(8, 8), state.seats().stream().map(seat -> seat.hand().size()).toList());
+        assertEquals(List.of(9, 7), state.seats().stream().map(seat -> seat.hand().size()).toList(),
+                "the obligatory exchange moves a card from one seat to another");
     }
 
     @Test
@@ -103,7 +105,7 @@ class GameStartTest {
 
     @Test
     void theDealOfFourPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
-        State state = Game.start(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L)).state();
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L));
 
         assertEquals(List.of(
                 card(SPADES, EIGHT), card(CLUBS, SEVEN), card(CLUBS, QUEEN), card(CLUBS, TEN),
@@ -125,7 +127,7 @@ class GameStartTest {
 
     @Test
     void theDealOfTwoPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
-        State state = Game.start(new Setup(RankSet.SIX_TO_ACE, TWO_SUITS, 42L)).state();
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, TWO_SUITS, 42L));
 
         assertEquals(SPADES, state.dealer().trump());
         assertEquals(List.of(
@@ -143,7 +145,7 @@ class GameStartTest {
     void theDeckIsDealtOneCardAtATimeFromTheSeatToTheLeftOfTheDealer() {
         Setup setup = new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L);
         List<Card> deck = Dealing.deck(setup);
-        State state = Game.start(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck)).state();
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck));
 
         int firstSeat = (state.seats().indexOf(state.dealer()) + 1) % FOUR_SUITS.size();
         for (int i = 0; i < deck.size(); i++) {
@@ -156,7 +158,7 @@ class GameStartTest {
     void anExplicitDeckOrderIsDealtAsGivenAndIsNotShuffled() {
         Setup setup = new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L);
         List<Card> deck = Dealing.deck(setup);
-        State state = Game.start(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck)).state();
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck));
 
         assertEquals(List.of(deck.get(0), deck.get(4), deck.get(8), deck.get(12),
                         deck.get(16), deck.get(20), deck.get(24), deck.get(28)),

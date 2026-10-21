@@ -15,14 +15,14 @@ public final class Game {
 
     /**
      * The first state of a game: the deck is built from the suits in play, the
-     * base card of every suit goes on the board of the seat that owns it, and
-     * the rest is dealt.
+     * base card of every suit goes on the board of the seat that owns it, the
+     * rest is dealt, and the obligatory exchange is applied.
      *
-     * <p>The obligatory exchange is not part of it yet, so the transition
-     * reports no events.
+     * <p>The transition reports no events yet.
      */
     public static Transition start(Setup setup) {
-        return new Transition(Dealing.deal(setup), List.of());
+        State dealt = Dealing.deal(setup);
+        return new Transition(Exchange.apply(dealt, setup.rankSet()), List.of());
     }
 
     /**
