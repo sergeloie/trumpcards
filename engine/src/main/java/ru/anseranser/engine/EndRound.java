@@ -2,6 +2,7 @@ package ru.anseranser.engine;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * The end of a round: the seat that still holds cards loses it, one of its
@@ -18,21 +19,34 @@ final class EndRound {
      * cards that came back are dealt to the seats still in the game and the
      * obligatory exchange is applied. The game is over when only one seat is
      * left in it, and then the cards that came back stay in the deck.
+     *
+     * <p>The transition reports the end of the round, the elimination of a
+     * seat, the round that began and the cards of that round. The end of the
+     * game is the last thing it reports.
      */
-    static State apply(State state) {
-        State resolved = resolve(state);
-        if (Seats.countInGame(resolved.seats()) <= 1) {
-            return resolved;
+    static Transition apply(State state) {
+        Transition resolution = resolve(state);
+        List<Event> events = new ArrayList<>(resolution.events());
+        if (Seats.countInGame(resolution.state().seats()) <= 1) {
+            events.add(new Event.GameEnded(survivor(resolution.state())));
+            return new Transition(resolution.state(), events);
         }
-        return Exchange.apply(Dealing.dealNextRound(resolved));
+        Transition dealt = Dealing.dealNextRound(resolution.state());
+        events.addAll(dealt.events());
+        Transition exchanged = Exchange.apply(dealt.state());
+        events.addAll(exchanged.events());
+        return new Transition(exchanged.state(), events);
     }
 
     /**
      * The round resolved: the loser's card is on its board, the seat is
      * eliminated when its board is complete, the cards that came back are in
      * the deck and the dealer of the next round is in place.
+     *
+     * <p>The transition reports the end of the round and the elimination of the
+     * seat whose board is complete.
      */
-    static State resolve(State state) {
+    static Transition resolve(State state) {
         List<Seat> seats = state.seats();
         int loserIndex = loserIndex(seats);
         Seat loser = seats.get(loserIndex);
@@ -53,8 +67,16 @@ final class EndRound {
         Seat dealer = eliminated
                 ? resolved.get(Seats.nextInGame(resolved, loserIndex))
                 : resolved.get(loserIndex);
-        return new State(resolved, List.of(), pile, dealer, dealer, false, state.turns(),
-                state.rngState());
+        State resolvedState = new State(resolved, List.of(), pile, dealer, dealer, false,
+                state.turns(), state.rngState());
+
+        List<Event> events = new ArrayList<>();
+        events.add(new Event.RoundEnded(resolved.get(loserIndex),
+                pushed == null ? Optional.empty() : Optional.of(pushed)));
+        if (eliminated) {
+            events.add(new Event.SeatEliminated(resolved.get(loserIndex)));
+        }
+        return new Transition(resolvedState, events);
     }
 
     /**
@@ -109,5 +131,15 @@ final class EndRound {
         List<Card> grown = new ArrayList<>(board);
         grown.add(card);
         return grown;
+    }
+
+    /** The seat that is still in the game when it ends. */
+    private static Seat survivor(State state) {
+        for (Seat seat : state.seats()) {
+            if (!seat.out()) {
+                return seat;
+            }
+        }
+        throw new IllegalStateException("no seat is left in the game");
     }
 }

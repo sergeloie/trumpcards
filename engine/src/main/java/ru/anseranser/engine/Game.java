@@ -1,5 +1,6 @@
 package ru.anseranser.engine;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -18,11 +19,20 @@ public final class Game {
      * base card of every suit goes on the board of the seat that owns it, the
      * rest is dealt, and the obligatory exchange is applied.
      *
-     * <p>The transition reports no events yet.
+     * <p>The transition reports the game that started, the round that began,
+     * the cards every seat received and every card the exchange passed.
      */
     public static Transition start(Setup setup) {
-        State dealt = Dealing.deal(setup);
-        return new Transition(Exchange.apply(dealt), List.of());
+        List<Event> events = new ArrayList<>();
+        events.add(new Event.GameStarted());
+
+        Transition dealt = Dealing.deal(setup);
+        events.addAll(dealt.events());
+
+        Transition exchanged = Exchange.apply(dealt.state());
+        events.addAll(exchanged.events());
+
+        return new Transition(exchanged.state(), events);
     }
 
     /**
@@ -37,9 +47,14 @@ public final class Game {
      * The index is a position in the list {@link #legalMoves(State)} returns,
      * so an illegal move has no representation.
      *
+     * <p>The transition reports the card that was played, whether it was a lead
+     * or a beat, the pot that was taken, the round that ended, the seat that
+     * was eliminated and the game that ended. A step that ends a round reports
+     * the round that began after it, with the cards of that round.
+     *
      * @throws IndexOutOfBoundsException when the index is not a legal move
      */
     public static Transition step(State state, int moveIndex) {
-        return new Transition(Trick.step(state, moveIndex), List.of());
+        return Trick.step(state, moveIndex);
     }
 }

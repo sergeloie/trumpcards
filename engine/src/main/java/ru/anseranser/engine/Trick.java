@@ -56,8 +56,11 @@ final class Trick {
      * The state after the move at {@code moveIndex}: the card played or the pot
      * taken, the turn advanced when the turn is over, and the round resolved
      * when it is over.
+     *
+     * <p>The transition reports the card that was played, whether it was a lead
+     * or a beat, and the pot that was taken.
      */
-    static State step(State state, int moveIndex) {
+    static Transition step(State state, int moveIndex) {
         Move move = legalMoves(state).get(moveIndex);
 
         List<Seat> seats = new ArrayList<>(state.seats());
@@ -65,6 +68,7 @@ final class Trick {
         int dealerIndex = seats.indexOf(state.dealer());
         Seat seat = seats.get(turnIndex);
         boolean leading = state.leadRequired() || state.pot().isEmpty();
+        Card top = state.pot().isEmpty() ? null : state.pot().get(state.pot().size() - 1);
 
         List<Card> hand = new ArrayList<>(seat.hand());
         List<Card> pot = new ArrayList<>(state.pot());
@@ -75,12 +79,24 @@ final class Trick {
             hand.addAll(pot);
             pot.clear();
         }
-        seats.set(turnIndex, new Seat(seat.trump(), hand, seat.board(), seat.out()));
+        Seat moved = new Seat(seat.trump(), hand, seat.board(), seat.out());
+        seats.set(turnIndex, moved);
+
+        List<Event> events = new ArrayList<>();
+        if (move instanceof Move.Play play) {
+            if (leading) {
+                events.add(new Event.CardPlayed(moved, play.card()));
+            } else {
+                events.add(new Event.CardBeaten(moved, top, play.card()));
+            }
+        } else {
+            events.add(new Event.PotTaken(moved, top, state.pot().size()));
+        }
 
         boolean turnOver = !(move instanceof Move.Play) || leading || hand.isEmpty();
         int turns = state.turns();
         boolean leadRequired = false;
-        Seat next = seats.get(turnIndex);
+        Seat next = moved;
         if (turnOver) {
             turns++;
             next = seats.get(Seats.nextWithCards(seats, turnIndex));
@@ -91,12 +107,15 @@ final class Trick {
         State advanced = new State(seats, pot, state.deck(), seats.get(dealerIndex), next,
                 leadRequired, turns, state.rngState());
         if (!turnOver) {
-            return advanced;
+            return new Transition(advanced, events);
         }
         if (Seats.countWithCards(seats) <= 1 || turns >= MAX_ROUND_TURNS) {
-            return withTurnOnASeatThatCanAct(EndRound.apply(advanced));
+            Transition end = EndRound.apply(advanced);
+            List<Event> all = new ArrayList<>(events);
+            all.addAll(end.events());
+            return new Transition(withTurnOnASeatThatCanAct(end).state(), all);
         }
-        return advanced;
+        return new Transition(advanced, events);
     }
 
     /**
@@ -112,17 +131,18 @@ final class Trick {
     }
 
     /**
-     * The state with the turn on a seat that can act: the dealer of the next
-     * round may hold no card at all.
+     * The transition with the turn on a seat that can act: the dealer of the
+     * next round may hold no card at all.
      */
-    static State withTurnOnASeatThatCanAct(State state) {
+    static Transition withTurnOnASeatThatCanAct(Transition transition) {
+        State state = transition.state();
         if (Seats.countInGame(state.seats()) <= 1 || !state.turn().hand().isEmpty()) {
-            return state;
+            return transition;
         }
         List<Seat> seats = state.seats();
         int turnIndex = seats.indexOf(state.turn());
         Seat next = seats.get(Seats.nextWithCards(seats, turnIndex));
-        return new State(seats, state.pot(), state.deck(), state.dealer(), next,
-                false, state.turns(), state.rngState());
+        return new Transition(new State(seats, state.pot(), state.deck(), state.dealer(), next,
+                false, state.turns(), state.rngState()), transition.events());
     }
 }

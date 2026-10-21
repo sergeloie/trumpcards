@@ -24,8 +24,11 @@ final class Dealing {
      *
      * <p>The draws are taken in the old engine's order: the dealer is chosen
      * first and the deck is shuffled afterwards.
+     *
+     * <p>The transition reports the round that began and the cards every seat
+     * received.
      */
-    static State deal(Setup setup) {
+    static Transition deal(Setup setup) {
         List<Card.Suit> trumps = setup.trumpSuits();
         SplitMix64 rng = new SplitMix64(setup.seed());
         int dealerIndex = rng.nextInt(trumps.size());
@@ -46,32 +49,53 @@ final class Dealing {
                     List.of(new Card(trump, setup.rankSet().baseRank())), false));
         }
         Seat dealer = seats.get(dealerIndex);
-        return new State(seats, List.of(), List.of(), dealer, dealer, false, 0, rng.state());
+        State state = new State(seats, List.of(), List.of(), dealer, dealer, false, 0, rng.state());
+
+        List<Event> events = new ArrayList<>();
+        events.add(new Event.RoundStarted(dealer));
+        for (Seat seat : seats) {
+            events.add(new Event.CardsDealt(seat, seat.hand()));
+        }
+        return new Transition(state, events);
     }
 
     /**
      * The next round: the cards that came back from the deck pool are shuffled
      * and dealt to the seats still in the game, one card at a time, starting
      * from the seat to the left of the dealer.
+     *
+     * <p>The transition reports the round that began and the cards every seat
+     * received; the cards a seat kept are not part of the deal.
      */
-    static State dealNextRound(State state) {
+    static Transition dealNextRound(State state) {
         List<Card> pool = new ArrayList<>(state.deck());
         SplitMix64 rng = new SplitMix64(state.rngState());
         shuffle(pool, rng);
 
         List<Seat> seats = state.seats();
         int dealerIndex = Seats.indexOfTrump(seats, state.dealer().trump());
-        List<List<Card>> hands = dealHands(pool, seats, dealerIndex);
+        List<List<Card>> dealt = dealHands(pool, seats, dealerIndex);
 
-        List<Seat> dealt = new ArrayList<>();
+        List<Seat> newSeats = new ArrayList<>();
         for (int i = 0; i < seats.size(); i++) {
             Seat seat = seats.get(i);
-            dealt.add(new Seat(seat.trump(), hands.get(i), seat.board(), seat.out()));
+            List<Card> hand = new ArrayList<>(seat.hand());
+            hand.addAll(dealt.get(i));
+            newSeats.add(new Seat(seat.trump(), hand, seat.board(), seat.out()));
         }
-        return new State(dealt, state.pot(), List.of(),
-                dealt.get(dealerIndex),
-                dealt.get(Seats.indexOfTrump(seats, state.turn().trump())),
+        State dealtState = new State(newSeats, state.pot(), List.of(),
+                newSeats.get(dealerIndex),
+                newSeats.get(Seats.indexOfTrump(seats, state.turn().trump())),
                 false, 0, rng.state());
+
+        List<Event> events = new ArrayList<>();
+        events.add(new Event.RoundStarted(dealtState.dealer()));
+        for (int i = 0; i < newSeats.size(); i++) {
+            if (!dealt.get(i).isEmpty()) {
+                events.add(new Event.CardsDealt(newSeats.get(i), dealt.get(i)));
+            }
+        }
+        return new Transition(dealtState, events);
     }
 
     /**
@@ -109,20 +133,21 @@ final class Dealing {
     }
 
     /**
-     * The hands of the next round: the pool is dealt on top of the hands that
-     * are left, and the seats that are out of the game receive nothing.
+     * The cards of the pool that every seat receives: the pool is dealt on top
+     * of the hands that are left, and the seats that are out of the game
+     * receive nothing.
      */
     private static List<List<Card>> dealHands(List<Card> pool, List<Seat> seats, int dealerIndex) {
-        List<List<Card>> hands = new ArrayList<>();
-        for (Seat seat : seats) {
-            hands.add(new ArrayList<>(seat.hand()));
+        List<List<Card>> dealt = new ArrayList<>();
+        for (int i = 0; i < seats.size(); i++) {
+            dealt.add(new ArrayList<>());
         }
         int seat = Seats.nextInGame(seats, dealerIndex);
         for (Card card : pool) {
-            hands.get(seat).add(card);
+            dealt.get(seat).add(card);
             seat = Seats.nextInGame(seats, seat);
         }
-        return hands;
+        return dealt;
     }
 
     /** Fisher-Yates from the end of the deck, as the old engine's dealer did. */

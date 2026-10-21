@@ -39,7 +39,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(SPADES, SIX), card(SPADES, SEVEN)), ended.seats().get(0).board(),
                 "the seven of spades is the rank the board requires next");
@@ -53,7 +53,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(SPADES, SIX), card(SPADES, NINE)), ended.seats().get(0).board(),
                 "the pile holds no seven of spades, so the lowest trump of the suit goes onto the board");
@@ -67,7 +67,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(CLUBS, SIX), card(CLUBS, SEVEN)), ended.seats().get(1).board(),
                 "the seat that still holds cards loses the round");
@@ -84,7 +84,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(card(DIAMONDS, EIGHT)), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(CLUBS, SIX), card(CLUBS, EIGHT)), ended.seats().get(1).board(),
                 "the seat with the most cards loses the capped round");
@@ -100,7 +100,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(SPADES, SIX), card(SPADES, NINE)), ended.seats().get(0).board(),
                 "the first seat of the tie loses the round");
@@ -115,7 +115,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(SPADES, EIGHT), card(HEARTS, NINE)), cardsInHands(ended),
                 "the loser's cards and the pot are dealt again");
@@ -132,7 +132,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertTrue(ended.seats().get(0).out(), "the seat whose board reached the ace is eliminated");
         assertEquals(List.of(card(SPADES, SIX), card(SPADES, SEVEN), card(SPADES, EIGHT),
@@ -149,7 +149,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertSame(ended.seats().get(0), ended.dealer(), "the loser deals the next round");
     }
@@ -163,7 +163,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertSame(ended.seats().get(1), ended.dealer(),
                 "the eliminated loser cannot deal, the next seat in the game does");
@@ -177,7 +177,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertSame(ended.dealer(), ended.turn(), "the dealer leads the next round");
     }
@@ -190,7 +190,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(List.of(card(HEARTS, SEVEN)), ended.seats().get(3).hand(),
                 "the seven of hearts goes to the seat that plays hearts");
@@ -205,7 +205,7 @@ class EndRoundTest {
                         board(CLUBS, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING)),
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(1, Seats.countInGame(ended.seats()), "one seat is left in the game");
         assertFalse(ended.seats().get(2).out(), "the last seat standing wins");
@@ -224,7 +224,7 @@ class EndRoundTest {
                 seat(DIAMONDS, List.of(), board(DIAMONDS, SIX)),
                 seat(HEARTS, List.of(), board(HEARTS, SIX)));
 
-        State ended = EndRound.apply(state);
+        State ended = EndRound.apply(state).state();
 
         assertEquals(cardsInPlay(state), cardsInPlay(ended));
     }

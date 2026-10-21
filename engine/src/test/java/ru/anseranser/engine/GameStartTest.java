@@ -105,7 +105,7 @@ class GameStartTest {
 
     @Test
     void theDealOfFourPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
-        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L));
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L)).state();
 
         assertEquals(List.of(
                 card(SPADES, EIGHT), card(CLUBS, SEVEN), card(CLUBS, QUEEN), card(CLUBS, TEN),
@@ -127,7 +127,7 @@ class GameStartTest {
 
     @Test
     void theDealOfTwoPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
-        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, TWO_SUITS, 42L));
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, TWO_SUITS, 42L)).state();
 
         assertEquals(SPADES, state.dealer().trump());
         assertEquals(List.of(
@@ -145,7 +145,7 @@ class GameStartTest {
     void theDeckIsDealtOneCardAtATimeFromTheSeatToTheLeftOfTheDealer() {
         Setup setup = new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L);
         List<Card> deck = Dealing.deck(setup);
-        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck));
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck)).state();
 
         int firstSeat = (state.seats().indexOf(state.dealer()) + 1) % FOUR_SUITS.size();
         for (int i = 0; i < deck.size(); i++) {
@@ -158,7 +158,7 @@ class GameStartTest {
     void anExplicitDeckOrderIsDealtAsGivenAndIsNotShuffled() {
         Setup setup = new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L);
         List<Card> deck = Dealing.deck(setup);
-        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck));
+        State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L, deck)).state();
 
         assertEquals(List.of(deck.get(0), deck.get(4), deck.get(8), deck.get(12),
                         deck.get(16), deck.get(20), deck.get(24), deck.get(28)),

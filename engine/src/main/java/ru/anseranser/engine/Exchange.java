@@ -22,8 +22,11 @@ final class Exchange {
      * the order of its hand. They are applied in that order: a card leaves the
      * hand that holds it and is appended to the end of the hand of the seat
      * that owns its suit.
+     *
+     * <p>The transition reports every card that was passed and the seat it
+     * went to.
      */
-    static State apply(State state) {
+    static Transition apply(State state) {
         List<Seat> seats = state.seats();
         int seatCount = seats.size();
 
@@ -62,10 +65,17 @@ final class Exchange {
             Seat seat = seats.get(i);
             exchanged.add(new Seat(seat.trump(), hands.get(i), seat.board(), seat.out()));
         }
-        return new State(exchanged, state.pot(), state.deck(),
+        State exchangedState = new State(exchanged, state.pot(), state.deck(),
                 exchanged.get(Seats.indexOfTrump(seats, state.dealer().trump())),
                 exchanged.get(Seats.indexOfTrump(seats, state.turn().trump())),
                 state.leadRequired(), state.turns(), state.rngState());
+
+        List<Event> events = new ArrayList<>();
+        for (Transfer transfer : transfers) {
+            events.add(new Event.CardsExchanged(exchanged.get(transfer.from()),
+                    exchanged.get(transfer.to()), transfer.card()));
+        }
+        return new Transition(exchangedState, events);
     }
 
     private record Transfer(int from, Card card, int to) {
