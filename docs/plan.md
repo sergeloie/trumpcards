@@ -88,6 +88,32 @@ re-implemented.
   generator's position. The board belongs to the seat; the round counter and the
   "must lead" flag arrive with T4.
 
+### What T2 established
+
+- `Setup` has four components — rank set, trump suits, seed, and an optional explicit
+  deck order — with a three-argument constructor for the ordinary case.
+- **An explicit deck order replaces the deck and is not shuffled.** The generator is
+  then asked only for the dealer, so the generator's position differs from the
+  shuffled path.
+- `Dealing` and `SplitMix64` are package-private in the engine. The generator has no
+  interface: the seed is in the setup and nothing needs injecting.
+- `Game.start` returns the state **before** the obligatory exchange; the exchange
+  arrives with T3, and the events with T6.
+
+Two traps that the next tasks inherit:
+
+9. **The generator's position has no universal closed form.** The ported `nextInt`
+   takes one draw per call *almost* always, but its rejection path can fire when the
+   intermediate arithmetic overflows — roughly one draw in ten million. A formula like
+   "the state after the start is seed + (1 + deck − 1) × GOLDEN" is therefore true for
+   the seeds that were measured and false for a handful of others. Do not assert the
+   formula across a seed range; compare traces instead.
+10. **The old engine cannot deal two or three suits** — its deck always holds four, and
+    its base cards are taken from all four suits. So the golden gate can only compare
+    the **four-player** game against the old engine. The two- and three-player
+    variants are new behaviour, defined by the rules and by ADR 0005, with no old
+    implementation to compare against.
+
 ### The new engine's package
 
 The new module is `engine` and its package is `ru.anseranser.engine`: the public value
