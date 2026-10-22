@@ -10,7 +10,7 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":engine"))
+    implementation(project(":core"))
     implementation(project(":bots"))
 
     // The episode files the exporter writes are read back and replayed here.

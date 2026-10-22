@@ -51,7 +51,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":engine"))
+    implementation(project(":core"))
     implementation(project(":bots"))
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)

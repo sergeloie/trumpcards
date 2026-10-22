@@ -1,18 +1,17 @@
-// :core is the pure game engine. It has no main entry point — platform modules
-// (console, desktop-libgdx, ...) provide the composition root.
+// :core is the rules module. It depends on nothing but the JDK: plain records
+// instead of Lombok, and nothing that would reach a runtime classpath.
 plugins {
     `java-library`
 }
 
 dependencies {
-    implementation(libs.gson)
-    // Lombok is a compile-time-only annotation processor: its classes must never
-    // reach the runtime classpath (R8 in full mode would choke on the missing
-    // lombok.javac.handlers.* references pulled in through ServiceLoader analysis).
-    compileOnly(libs.lombok)
-    annotationProcessor(libs.lombok)
-
     testImplementation(libs.junit.jupiter)
+    // The tests drive the rules with the rule bot of the :bots module. The two
+    // modules depend on each other in the test scope only: the bot needs the
+    // rules' types, the tests need the bot. The task graph stays acyclic,
+    // because :core:compileTestJava needs :bots:jar, and :bots:jar needs
+    // :core:jar.
+    testImplementation(project(":bots"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

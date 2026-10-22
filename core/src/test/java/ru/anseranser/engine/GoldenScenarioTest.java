@@ -4,8 +4,11 @@ import org.junit.jupiter.api.Test;
 import ru.anseranser.bots.RuleBot;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,17 +45,20 @@ class GoldenScenarioTest {
     /** The seed of the game the old engine wins with DIAMONDS. */
     private static final long WHOLE_GAME_SEED = 42L;
 
+    /** The suits of the table, in the canonical order the deck is built in. */
+    private static final List<Card.Suit> TRUMPS = List.of(SPADES, CLUBS, DIAMONDS, HEARTS);
+
     // ---------- Scenario 1: obligatory card exchange (rules.md §2.3) ----------
 
     @Test
     void obligatoryExchange_movesEverySeventhToItsSuitOwner() {
-        Map<Card.Suit, List<Card>> layout = ScriptedLayout.hands(Map.of(
+        Map<Card.Suit, List<Card>> layout = hands(Map.of(
                 SPADES, List.of(card(CLUBS, SEVEN)),
                 CLUBS, List.of(card(DIAMONDS, SEVEN)),
                 DIAMONDS, List.of(card(HEARTS, SEVEN)),
                 HEARTS, List.of(card(SPADES, SEVEN))), List.of(Card.Suit.values()));
 
-        State state = Game.start(ScriptedLayout.setup(layout, SPADES_DEALER_SEED)).state();
+        State state = Game.start(setup(layout, SPADES_DEALER_SEED)).state();
 
         for (Seat seat : state.seats()) {
             assertTrue(seat.hand().contains(new Card(seat.trump(), SEVEN)),
@@ -72,7 +78,7 @@ class GoldenScenarioTest {
     void defenderWithNoLegalDefense_takesThePot() {
         Card clubsEight = card(CLUBS, EIGHT);
 
-        List<Event> events = play(ScriptedLayout.setup(cannotBeatLayout(), SPADES_DEALER_SEED), 2, clubsEight);
+        List<Event> events = play(setup(cannotBeatLayout(), SPADES_DEALER_SEED), 2, clubsEight);
 
         List<Event.CardPlayed> played = ofType(events, Event.CardPlayed.class);
         List<Event.PotTaken> taken = ofType(events, Event.PotTaken.class);
@@ -94,7 +100,7 @@ class GoldenScenarioTest {
         Card clubsEight = card(CLUBS, EIGHT);
         Card clubsNine = card(CLUBS, NINE);
 
-        List<Event> events = play(ScriptedLayout.setup(canBeatLayout(), SPADES_DEALER_SEED), 3, clubsEight);
+        List<Event> events = play(setup(canBeatLayout(), SPADES_DEALER_SEED), 3, clubsEight);
 
         List<Event.CardBeaten> beaten = ofType(events, Event.CardBeaten.class);
         assertEquals(1, beaten.size());
@@ -112,9 +118,9 @@ class GoldenScenarioTest {
 
     @Test
     void roundEnd_pushesNextTrumpToLoserBoard() {
-        Map<Card.Suit, List<Card>> layout = ScriptedLayout.hands(Map.of(), List.of(Card.Suit.values()));
+        Map<Card.Suit, List<Card>> layout = hands(Map.of(), List.of(Card.Suit.values()));
 
-        State state = Game.start(ScriptedLayout.setup(layout, SPADES_DEALER_SEED)).state();
+        State state = Game.start(setup(layout, SPADES_DEALER_SEED)).state();
         List<Event> events = new ArrayList<>();
         while (ofType(events, Event.RoundEnded.class).isEmpty()) {
             List<Move> moves = Game.legalMoves(state);
@@ -138,7 +144,7 @@ class GoldenScenarioTest {
 
     @Test
     void wholeGame_completesLadderToAce_andEndsWithOneWinner() {
-        Setup setup = new Setup(RankSet.SIX_TO_ACE, NewEngine.TRUMPS, WHOLE_GAME_SEED);
+        Setup setup = new Setup(RankSet.SIX_TO_ACE, TRUMPS, WHOLE_GAME_SEED);
         Transition start = Game.start(setup);
         List<Event> events = new ArrayList<>(start.events());
         State state = start.state();
@@ -167,6 +173,56 @@ class GoldenScenarioTest {
         assertEquals(survivor, gameEnded.get(0).winner(), "The GameEnded winner must be the surviving gamer");
         assertEquals(DIAMONDS, gameEnded.get(0).winner().trump(),
                 "Golden winner for the game of this seed, the one the old engine gives");
+    }
+
+    /**
+     * The hands of the seats: the cards pinned to them first, then the rest of
+     * the deck shared out among the seats of the fill order.
+     */
+    private static Map<Card.Suit, List<Card>> hands(Map<Card.Suit, List<Card>> pinned, List<Card.Suit> fillOrder) {
+        Map<Card.Suit, List<Card>> hands = new EnumMap<>(Card.Suit.class);
+        for (Card.Suit suit : Card.Suit.values()) {
+            hands.put(suit, new ArrayList<>(pinned.getOrDefault(suit, List.of())));
+        }
+        Set<Card> used = new HashSet<>();
+        for (List<Card> cards : pinned.values()) {
+            used.addAll(cards);
+        }
+        int dealt = 0;
+        for (Card.Suit suit : Card.Suit.values()) {
+            for (Card.Rank rank : RankSet.SIX_TO_ACE.ranks()) {
+                if (rank == RankSet.SIX_TO_ACE.baseRank()) {
+                    continue;
+                }
+                Card card = new Card(suit, rank);
+                if (used.add(card)) {
+                    hands.get(fillOrder.get(dealt++ % fillOrder.size())).add(card);
+                }
+            }
+        }
+        return hands;
+    }
+
+    /** The setup that deals the hands to the seats, the dealer of the seed included. */
+    private static Setup setup(Map<Card.Suit, List<Card>> hands, long seed) {
+        int dealer = new SplitMix64(seed).nextInt(TRUMPS.size());
+        return new Setup(RankSet.SIX_TO_ACE, TRUMPS, seed, deckOrder(hands, TRUMPS, dealer));
+    }
+
+    /**
+     * The deck order that deals the hands to the seats, one card at a time,
+     * starting at the seat to the left of the dealer.
+     */
+    private static List<Card> deckOrder(Map<Card.Suit, List<Card>> hands, List<Card.Suit> trumps, int dealer) {
+        int seats = trumps.size();
+        int size = hands.get(trumps.get(0)).size();
+        List<Card> deck = new ArrayList<>();
+        for (int round = 0; round < size; round++) {
+            for (int seat = 0; seat < seats; seat++) {
+                deck.add(hands.get(trumps.get((dealer + 1 + seat) % seats)).get(round));
+            }
+        }
+        return deck;
     }
 
     /**

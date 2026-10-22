@@ -9,7 +9,7 @@ dependencies {
     // The types of the rules cross the boundary of the observation's
     // signature, so the engine is an api dependency and not an
     // implementation one.
-    api(project(":engine"))
+    api(project(":core"))
 
     // The runtime is an implementation detail: no type of it appears in the
     // signature of the policy.

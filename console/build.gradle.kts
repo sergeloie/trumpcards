@@ -5,7 +5,7 @@ plugins {
 // Console platform module: the text front end of the new engine. It holds the
 // strings of the console and the code that shows them and asks for a choice.
 dependencies {
-    implementation(project(":engine"))
+    implementation(project(":core"))
     implementation(project(":bots"))
 
     testImplementation(libs.junit.jupiter)

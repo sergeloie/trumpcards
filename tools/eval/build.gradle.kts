@@ -9,7 +9,7 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":engine"))
+    implementation(project(":core"))
     implementation(project(":bots"))
     implementation(project(":ml"))
 

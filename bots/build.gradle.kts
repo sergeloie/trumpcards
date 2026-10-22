@@ -7,7 +7,7 @@ plugins {
 dependencies {
     // The types of the rules cross the boundary of the policy's signature,
     // so the engine is an api dependency and not an implementation one.
-    api(project(":engine"))
+    api(project(":core"))
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
