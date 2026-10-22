@@ -3,7 +3,6 @@ package ru.anseranser.desktop;
 import com.badlogic.gdx.Gdx;
 import ru.anseranser.event.GameEvent;
 import ru.anseranser.event.GameListener;
-import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.model.Card;
 import ru.anseranser.model.Game;
 import ru.anseranser.model.Player;
@@ -20,7 +19,7 @@ import java.util.List;
  * into view updates and never touches game rules.</p>
  *
  * <p>Players are identified in events by their trump suit ({@link Card.Suit});
- * this listener renders that suit via {@link CardLocalizer}.</p>
+ * this listener renders that suit by its name.</p>
  */
 public final class DesktopGameListener implements GameListener {
 
@@ -31,7 +30,6 @@ public final class DesktopGameListener implements GameListener {
     private final GameScreen screen;
     private final Game game;
     private final Card.Suit humanSeat;
-    private final CardLocalizer cardLocalizer = new CardLocalizer(CardLocalizer.Style.LETTERS);
 
     /**
      * @param humanSeat the seat the composition root ({@link DesktopLauncher})
@@ -118,7 +116,7 @@ public final class DesktopGameListener implements GameListener {
 
     /** ASCII-safe short card label, e.g. "AS", "7H". */
     private String card(Card c) {
-        return cardLocalizer.cardName(c);
+        return CardCodes.of(c);
     }
 
     /** Exposed for callers that want a fresh log line after a manual action. */

@@ -21,7 +21,7 @@ class MessagesTest {
 
     @Test
     void russianBundleOverridesDefault() {
-        Messages ru = new Messages(new Locale("ru"));
+        Messages ru = new Messages(Locale.of("ru"));
         assertEquals("=== ИГРА НАЧИНАЕТСЯ ===", ru.get("game.started"));
         assertEquals("Победитель: SPADES", ru.get("game.winner", "SPADES"));
         assertTrue(ru.get("event.pot_taken", "DIAMONDS", "ACE", 9)

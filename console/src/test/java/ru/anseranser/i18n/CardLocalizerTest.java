@@ -1,7 +1,7 @@
 package ru.anseranser.i18n;
 
 import org.junit.jupiter.api.Test;
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
 
 import java.util.Locale;
 
@@ -27,7 +27,7 @@ class CardLocalizerTest {
 
     @Test
     void full_russian() {
-        CardLocalizer ru = new CardLocalizer(new Messages(new Locale("ru")), CardLocalizer.Style.FULL);
+        CardLocalizer ru = new CardLocalizer(new Messages(Locale.of("ru")), CardLocalizer.Style.FULL);
         assertEquals("Туз пик", ru.cardName(ACE_SPADES));
         assertEquals("Семёрка червей", ru.cardName(SEVEN_HEARTS));
         assertEquals("Десятка бубён", ru.cardName(TEN_DIAMONDS));
@@ -43,7 +43,7 @@ class CardLocalizerTest {
 
     @Test
     void short_russian() {
-        CardLocalizer ru = new CardLocalizer(new Messages(new Locale("ru")), CardLocalizer.Style.SHORT);
+        CardLocalizer ru = new CardLocalizer(new Messages(Locale.of("ru")), CardLocalizer.Style.SHORT);
         assertEquals("Т\u2660", ru.cardName(ACE_SPADES));
         assertEquals("7\u2665", ru.cardName(SEVEN_HEARTS));
         assertEquals("10\u2666", ru.cardName(TEN_DIAMONDS));
@@ -53,7 +53,7 @@ class CardLocalizerTest {
     void suitSymbolsAreUniform() {
         // Suit symbols are international — identical across locales.
         CardLocalizer en = new CardLocalizer(new Messages(Locale.ENGLISH), CardLocalizer.Style.SHORT);
-        CardLocalizer ru = new CardLocalizer(new Messages(new Locale("ru")), CardLocalizer.Style.SHORT);
+        CardLocalizer ru = new CardLocalizer(new Messages(Locale.of("ru")), CardLocalizer.Style.SHORT);
         for (Card.Suit s : Card.Suit.values()) {
             assertEquals(en.suitSymbol(s), ru.suitSymbol(s), "symbol for " + s + " must match across locales");
         }

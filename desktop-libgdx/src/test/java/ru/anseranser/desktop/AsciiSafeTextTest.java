@@ -1,7 +1,6 @@
 package ru.anseranser.desktop;
 
 import org.junit.jupiter.api.Test;
-import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.model.Card;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,10 +23,9 @@ class AsciiSafeTextTest {
 
     @Test
     void letterStyleCardNames_areAscii() {
-        CardLocalizer loc = new CardLocalizer(CardLocalizer.Style.LETTERS);
         for (Card.Suit suit : Card.Suit.values()) {
             for (Card.Rank rank : Card.Rank.values()) {
-                String name = loc.cardName(new Card(suit, rank), CardLocalizer.Style.LETTERS);
+                String name = CardCodes.of(new Card(suit, rank));
                 assertTrue(isAscii(name), "non-ASCII card name: " + name);
             }
         }
@@ -35,9 +33,8 @@ class AsciiSafeTextTest {
 
     @Test
     void suitLetters_areAscii() {
-        CardLocalizer loc = new CardLocalizer(CardLocalizer.Style.LETTERS);
         for (Card.Suit suit : Card.Suit.values()) {
-            assertTrue(isAscii(loc.suitLetter(suit)), "non-ASCII suit letter: " + loc.suitLetter(suit));
+            assertTrue(isAscii(CardCodes.suitLetter(suit)), "non-ASCII suit letter: " + CardCodes.suitLetter(suit));
         }
     }
 

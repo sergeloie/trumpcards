@@ -11,7 +11,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.input.HumanDecisionStrategy;
 import ru.anseranser.model.AiDecisionStrategy;
 import ru.anseranser.model.Card;
@@ -82,7 +81,7 @@ public class DesktopLauncher extends ApplicationAdapter {
 
         input = new DesktopInputProvider();
         assets = new CardAssets();
-        screen = new GameScreen(skin, new CardLocalizer(CardLocalizer.Style.LETTERS), input, assets);
+        screen = new GameScreen(skin, input, assets);
 
         stage = new Stage();
         Gdx.input.setInputProcessor(stage);

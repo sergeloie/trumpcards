@@ -2,10 +2,11 @@ plugins {
     application
 }
 
-// Console platform module: a thin composition root that wires the :core engine
-// to console-based input/output. Contains no game rules — only platform glue.
+// Console platform module: the text front end of the new engine. It holds the
+// strings of the console and the code that shows them and asks for a choice.
 dependencies {
-    implementation(project(":core"))
+    implementation(project(":engine"))
+    implementation(project(":bots"))
 
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

@@ -1,55 +1,44 @@
 package ru.anseranser.i18n;
 
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
 
 import java.util.Locale;
 
 /**
- * Localizes {@link Card}s for the presentation layer. The model ({@code Card})
- * intentionally stays locale-agnostic — its {@code toString()} keeps the neutral
- * "ACE of SPADES" form for logs — and every human-readable card name is produced
- * here, from the same {@code messages_*} ResourceBundle that {@link Messages} uses.
+ * The localized names of the cards and the suits. The card itself stays
+ * locale-agnostic; every name a person reads is produced here, from the same
+ * bundle {@link Messages} uses.
  *
- * <p>Two rendering styles are supported so one implementation serves both the
- * console and a future GUI / mobile target:
- * <ul>
- *   <li>{@link Style#FULL} — word form, e.g. English "ace of spades", Russian
- *       "туз пик". Safe for the Windows console (no Unicode suit glyphs).</li>
- *   <li>{@link Style#SHORT} — compact glyph form, e.g. "A\u2660", "7\u2665"
- *       (rank short-glyph + suit symbol). Intended for card widgets in a GUI.</li>
- * </ul>
- *
- * <p>Usage:
- * <pre>{@code
- *   CardLocalizer cards = new CardLocalizer(new Messages(new Locale("ru")), Style.FULL);
- *   System.out.println(cards.cardName(card)); // "туз пик"
- * }</pre>
+ * <p>Three styles are offered: the word form, the compact glyph form and the
+ * compact letter form. The word form is safe for a terminal, the letter form
+ * is safe for a font that has no glyphs.</p>
  */
 public class CardLocalizer {
 
     /** How a card name is rendered. */
     public enum Style {
-        /** Word form: "ace of spades" / "туз пик". */
+        /** The word form: "ace of spades". */
         FULL,
-        /** Compact glyph form: "A♠" / "7♥" (Unicode suit symbol — needs a font with glyphs). */
+        /** The compact glyph form: "A♠". */
         SHORT,
-        /** Compact ASCII-safe form: "AS" / "7H" / "TD" (rank + suit letter). Portable to any font. */
+        /** The compact letter form: "AS". */
         LETTERS
     }
 
     private final Messages messages;
     private final Style style;
 
-    /** Full English words, default JVM locale, FULL style. */
+    /** The word form, in the JVM default locale. */
     public CardLocalizer() {
         this(new Messages(), Style.FULL);
     }
 
-    /** Given style with the default JVM locale. */
+    /** The given style, in the JVM default locale. */
     public CardLocalizer(Style style) {
         this(new Messages(), style);
     }
 
+    /** The word form, in the locale of {@code messages}. */
     public CardLocalizer(Messages messages) {
         this(messages, Style.FULL);
     }
@@ -63,27 +52,27 @@ public class CardLocalizer {
         this(new Messages(locale), style);
     }
 
-    /** Localized name of a suit (e.g. "Spades" / "Пики"). */
+    /** The name of a suit. */
     public String suitName(Card.Suit suit) {
         return messages.get("card.suit." + suit.name().toLowerCase());
     }
 
-    /** Suit symbol (e.g. "\u2660"). International, not language-specific. */
+    /** The symbol of a suit, the same in every language. */
     public String suitSymbol(Card.Suit suit) {
         return messages.get("card.suit." + suit.name().toLowerCase() + ".symbol");
     }
 
-    /** Localized name of a rank (e.g. "Ace" / "Туз"). */
+    /** The name of a rank. */
     public String rankName(Card.Rank rank) {
         return messages.get("card.rank." + rank.name().toLowerCase());
     }
 
-    /** Short rank glyph (e.g. "A" / "Т"). */
+    /** The short glyph of a rank. */
     public String rankShort(Card.Rank rank) {
         return messages.get("card.rank." + rank.name().toLowerCase() + ".short");
     }
 
-    /** Language-independent ASCII rank code used by the LETTERS style (6/7/8/9/10/J/Q/K/A). */
+    /** The rank code of the letter style: 6, 7, 8, 9, 10, J, Q, K, A. */
     public String rankLetter(Card.Rank rank) {
         return switch (rank) {
             case TWO -> "2";
@@ -102,15 +91,12 @@ public class CardLocalizer {
         };
     }
 
-    /**
-     * Localized name of a card in this localizer's {@link Style}. With {@code FULL}
-     * the result is the word form; with {@code SHORT} the compact glyph form.
-     */
+    /** The name of a card in the style of this localizer. */
     public String cardName(Card card) {
         return cardName(card, style);
     }
 
-    /** Localized name of a card in the requested style (overrides this instance's). */
+    /** The name of a card in the given style. */
     public String cardName(Card card, Style override) {
         if (override == Style.SHORT) {
             return rankShort(card.rank()) + suitSymbol(card.suit());
@@ -121,7 +107,7 @@ public class CardLocalizer {
         return messages.get("card.format.full", rankName(card.rank()), suitName(card.suit()));
     }
 
-    /** One-letter suit code (S/H/D/C), language-independent. For the LETTERS style. */
+    /** The suit code of the letter style: S, H, D, C. */
     public String suitLetter(Card.Suit suit) {
         return switch (suit) {
             case SPADES -> "S";

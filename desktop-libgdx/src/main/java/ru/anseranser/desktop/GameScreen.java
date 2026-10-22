@@ -5,7 +5,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup;
-import ru.anseranser.i18n.CardLocalizer;
 import ru.anseranser.model.Card;
 
 import java.util.Comparator;
@@ -39,7 +38,6 @@ import java.util.List;
 final class GameScreen extends Table {
 
     private final Skin skin;
-    private final CardLocalizer localizer;
     private final DesktopInputProvider input;
     private final CardAssets assets;
 
@@ -52,10 +50,9 @@ final class GameScreen extends Table {
     private final Table rightOpponent;
     private final Table humanPanel;
 
-    GameScreen(Skin skin, CardLocalizer localizer, DesktopInputProvider input, CardAssets assets) {
+    GameScreen(Skin skin, DesktopInputProvider input, CardAssets assets) {
         super(skin);
         this.skin = skin;
-        this.localizer = localizer;
         this.input = input;
         this.assets = assets;
 
@@ -120,7 +117,7 @@ final class GameScreen extends Table {
         snap.scoreboard().forEach((suit, stack) -> {
             String label = stack.isEmpty()
                     ? "-"
-                    : localizer.cardName(stack.get(0), CardLocalizer.Style.LETTERS);
+                    : CardCodes.of(stack.get(0));
             scoreboardGroup.addActor(new Label(label, skin));
         });
 
