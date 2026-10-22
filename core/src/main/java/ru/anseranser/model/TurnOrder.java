@@ -55,16 +55,22 @@ public class TurnOrder implements Iterable<Player> {
 
     /**
      * The next active player starting from {@code from} (exclusive), skipping
-     * players that do not satisfy {@code active}. Assumes at least one player
-     * satisfies the predicate (otherwise throws), which holds for the game's
-     * "advance until someone can act" loops.
+     * players that do not satisfy {@code active}. The walk visits every player
+     * at most once, so a predicate that nobody satisfies ends the walk instead
+     * of looping forever.
+     *
+     * @throws IllegalStateException when no player satisfies the predicate
      */
     public Player nextActive(Player from, Predicate<Player> active) {
         Player current = from;
-        do {
+        for (int step = 0; step < players.size(); step++) {
             current = next(current);
-        } while (!active.test(current));
-        return current;
+            if (active.test(current)) {
+                return current;
+            }
+        }
+        throw new IllegalStateException("No player can act: none of the "
+                + players.size() + " players satisfies the predicate");
     }
 
     /** Iterate over every player exactly once, in seating order. */

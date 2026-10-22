@@ -295,6 +295,11 @@ public class Game {
         return players.nextActive(from, Player::isGamer);
     }
 
+    /** Whether the player can act in the round: still in the game and holding at least one card. */
+    private static boolean canAct(Player player) {
+        return player.isGamer() && !player.getHand().isEmpty();
+    }
+
     /** Pick the first dealer at random (house rule for round 1). */
     private void chooseFirstDealer() {
         dealerSeat = players.get(rng.nextInt(players.size()));
@@ -502,6 +507,24 @@ public class Game {
             leadingNewTrick = false;
             pendingAction = null;
             forcedCard = null;
+            skipEmptyDealerTurn();
+        }
+
+        /**
+         * The turn of a dealer that holds no card is over before the round
+         * begins, and it counts as a turn of the round. A round that begins
+         * with a single seat holding cards ends at once, and the seat that
+         * holds the card loses it.
+         */
+        private void skipEmptyDealerTurn() {
+            if (!current.getHand().isEmpty()) {
+                return;
+            }
+            moves++;
+            current = getPlayers().nextActive(current, Game::canAct);
+            if (RoundResolver.countActiveWithCards(getPlayers()) <= 1) {
+                phase = Phase.ROUND_ENDED;
+            }
         }
 
         /**
@@ -642,7 +665,7 @@ public class Game {
         }
 
         private void advanceAfterTurn() {
-            current = getPlayers().nextActive(current, p -> p.isGamer() && !p.getHand().isEmpty());
+            current = getPlayers().nextActive(current, Game::canAct);
             moves++;
             if (RoundResolver.countActiveWithCards(getPlayers()) <= 1 || moves >= MAX_ROUND_MOVES) {
                 phase = Phase.ROUND_ENDED;
