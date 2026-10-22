@@ -11,6 +11,15 @@ import java.util.List;
  */
 public final class Game {
 
+    /**
+     * The bound on the turns of one round: a round that reaches it is ended
+     * there and then, and its loser is the seat that holds the most cards.
+     *
+     * <p>The bound is a defect guard, never a normal outcome, so the tools
+     * around the training loop report the rounds that hit it.
+     */
+    public static final int MAX_ROUND_TURNS = Trick.MAX_ROUND_TURNS;
+
     private Game() {
     }
 
