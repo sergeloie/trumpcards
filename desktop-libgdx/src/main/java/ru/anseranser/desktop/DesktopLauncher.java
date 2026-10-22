@@ -11,46 +11,43 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import ru.anseranser.input.HumanDecisionStrategy;
-import ru.anseranser.model.AiDecisionStrategy;
-import ru.anseranser.model.Card;
-import ru.anseranser.model.DecisionStrategy;
-import ru.anseranser.model.DeckSize;
-import ru.anseranser.model.Game;
-import ru.anseranser.model.Game.GameDriver;
-import ru.anseranser.model.Player;
+import ru.anseranser.bots.RuleBot;
+import ru.anseranser.engine.Card;
+import ru.anseranser.engine.RankSet;
+import ru.anseranser.engine.Setup;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * LibGDX desktop entry point (Windows / Linux / macOS).
  *
- * <p>Stage 3: the human plays by clicking cards. The engine's {@link GameDriver}
- * runs on a dedicated thread (NOT the LibGDX render thread) so that blocking on
- * a human choice does not freeze click handling. When it is an AI's turn the
- * loop sleeps briefly between moves for visibility; when it is the human's turn
- * {@link DesktopInputProvider#onCardClicked} (fired by a card click on the
- * render thread) resolves the blocked choice.</p>
+ * <p>The engine runs on a dedicated thread (NOT the LibGDX render thread) so
+ * that blocking on a human choice does not freeze click handling. The engine
+ * gives the legal moves, the person at the mouse picks one of them by clicking
+ * a card, and the transition that follows is rendered on the render thread.</p>
  */
 public class DesktopLauncher extends ApplicationAdapter {
 
-    private static final float AI_PAUSE_MS = 450f;
+    /** The pause after a move of the bot, so that the person sees it. */
+    private static final long AI_PAUSE_MS = 450L;
 
     /**
      * The seat the human plays (finding D2). Decided once here, in the
-     * composition root (R6), and passed down to the listener/snapshot/screen so
+     * composition root (R6), and passed down to the renderer/snapshot/screen so
      * the presentation layer never assumes a particular suit is the human.
      */
     static final Card.Suit HUMAN_SEAT = Card.Suit.SPADES;
+
+    /** The suits in play, one per seat, in the seating order. */
+    static final List<Card.Suit> TRUMPS = List.of(
+            Card.Suit.SPADES, Card.Suit.CLUBS, Card.Suit.DIAMONDS, Card.Suit.HEARTS);
 
     private Stage stage;
     private Skin skin;
     private GameScreen screen;
     private CardAssets assets;
-    private Game game;
-    private DesktopGameListener listener;
     private DesktopInputProvider input;
+    private DesktopRenderer renderer;
     private Thread gameThread;
     private volatile boolean running = true;
 
@@ -73,10 +70,12 @@ public class DesktopLauncher extends ApplicationAdapter {
         skin.add("default", new Label.LabelStyle(font, Color.BLACK), Label.LabelStyle.class);
         skin.add("default", new ScrollPane.ScrollPaneStyle(), ScrollPane.ScrollPaneStyle.class);
         // Minimal TextButton style (text only — no drawables) so the start menu
-        // buttons can be built without an external skin asset.
+        // buttons can be built without an external skin asset. The disabled
+        // colour tells the person that taking the pot is not a legal move.
         TextButton.TextButtonStyle textButtonStyle = new TextButton.TextButtonStyle();
         textButtonStyle.font = font;
         textButtonStyle.fontColor = Color.BLACK;
+        textButtonStyle.disabledFontColor = Color.GRAY;
         skin.add("default", textButtonStyle, TextButton.TextButtonStyle.class);
 
         input = new DesktopInputProvider();
@@ -97,50 +96,32 @@ public class DesktopLauncher extends ApplicationAdapter {
         stage.addActor(new StartMenu(skin, this::startGameWith));
     }
 
-    /** Build the game for the chosen deck size and start the engine thread. */
-    private void startGameWith(DeckSize deckSize) {
-        // Composition root: the HUMAN_SEAT player is mouse-driven, the rest are AI.
-        List<Player> players = new ArrayList<>();
-        for (Card.Suit suit : Card.Suit.values()) {
-            DecisionStrategy strategy = (suit == HUMAN_SEAT)
-                    ? new HumanDecisionStrategy(input)
-                    : new AiDecisionStrategy();
-            players.add(new Player(suit, strategy));
-        }
-        game = new Game(players, deckSize);
-        listener = new DesktopGameListener(game, screen, HUMAN_SEAT);
-        // Repaint when the human's valid choices become known (no engine event
-        // is fired for "your turn"), so playable cards get highlighted.
-        input.setRepaintHook(() -> listener.requestRepaint());
-        game.setListener(listener);
+    /** Build the game for the chosen rank set and start the engine thread. */
+    private void startGameWith(RankSet rankSet) {
+        renderer = new DesktopRenderer(screen, HUMAN_SEAT);
+        // Repaint when the human's legal moves become known, so that the
+        // playable cards get highlighted.
+        input.setRepaintHook(renderer::repaint);
 
         stage.clear();
         stage.addActor(screen);
 
+        Setup setup = new Setup(rankSet, TRUMPS, System.nanoTime());
+        MoveChooser bot = (state, moves) -> {
+            waitForTheBot();
+            return RuleBot.choose(state, moves);
+        };
+        GameLoop loop = new GameLoop(HUMAN_SEAT, input, bot, renderer::render);
+
         // Run the engine on its own thread so blocking on human input does not
         // stall the render thread that dispatches card clicks.
-        gameThread = new Thread(this::runGame, "game-loop");
+        gameThread = new Thread(() -> runGame(loop, setup), "game-loop");
         gameThread.start();
     }
 
-    private void runGame() {
+    private void runGame(GameLoop loop, Setup setup) {
         try {
-            GameDriver driver = game.createDriver();
-            driver.startGame();
-            while (running && !driver.isGameOver()) {
-                Player current = driver.getCurrent();
-                boolean more = driver.step();
-                if (!more) {
-                    driver.finishRound();
-                    continue;
-                }
-                // Only pause after an AI move; a human move already blocks until a click.
-                if (!current.isHuman()) {
-                    Thread.sleep((long) AI_PAUSE_MS);
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            loop.play(setup);
         } catch (RuntimeException e) {
             // A rules/engine failure should not silently freeze the UI; surface it
             // only when it is not just the expected interrupt during shutdown.
@@ -149,6 +130,14 @@ public class DesktopLauncher extends ApplicationAdapter {
             }
         } finally {
             running = false;
+        }
+    }
+
+    private void waitForTheBot() {
+        try {
+            Thread.sleep(AI_PAUSE_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 

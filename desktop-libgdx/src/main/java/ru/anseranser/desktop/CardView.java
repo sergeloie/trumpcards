@@ -6,7 +6,10 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Container;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * A single card rendered as a graphical asset (a {@link TextureRegion} from
@@ -15,7 +18,7 @@ import ru.anseranser.model.Card;
  *
  * <p>When {@code onClick} is provided the card becomes clickable (used for the
  * human's hand to feed {@link DesktopInputProvider}). A green tint marks a card
- * that is currently a valid choice.</p>
+ * that is currently a legal choice.</p>
  */
 final class CardView extends Container<Image> {
 
@@ -26,11 +29,14 @@ final class CardView extends Container<Image> {
         void accept(Card card);
     }
 
+    private final Card card;
+
     CardView(TextureRegion region, Card card, ClickHandler onClick) {
         Image image = new Image(region);
         setActor(image);
         setSize(CARD_W, CARD_H);
         image.setFillParent(true);
+        this.card = card;
         if (onClick != null && card != null) {
             addListener(new ClickListener() {
                 @Override
@@ -56,6 +62,11 @@ final class CardView extends Container<Image> {
         return new CardView(assets.empty(), null, null);
     }
 
+    /** The card the view shows, or null for a back and for an empty slot. */
+    Card card() {
+        return card;
+    }
+
     /** Tint the card green to mark it as a currently valid choice. */
     void markPlayable() {
         getActor().setColor(Color.GREEN);
@@ -63,6 +74,17 @@ final class CardView extends Container<Image> {
 
     void clearMark() {
         getActor().setColor(Color.WHITE);
+    }
+
+    /** Marks the cards the seat to move may play and unmarks all the others. */
+    static void markLegal(List<CardView> views, Set<Card> playable) {
+        for (CardView view : views) {
+            if (playable.contains(view.card())) {
+                view.markPlayable();
+            } else {
+                view.clearMark();
+            }
+        }
     }
 
     /** Rotate the whole card widget by the given degrees (e.g. 90 for side seats). */

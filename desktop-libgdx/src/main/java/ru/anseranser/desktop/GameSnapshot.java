@@ -1,94 +1,126 @@
 package ru.anseranser.desktop;
 
-import ru.anseranser.model.Card;
-import ru.anseranser.model.Game;
-import ru.anseranser.model.GameState;
-import ru.anseranser.model.Player;
+import ru.anseranser.engine.Card;
+import ru.anseranser.engine.Game;
+import ru.anseranser.engine.Move;
+import ru.anseranser.engine.Seat;
+import ru.anseranser.engine.State;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Desktop view-model: a core {@link GameState} (the immutable, presentation-agnostic
- * snapshot) plus the desktop-only decorations (a human-readable status line and the
- * rolling move log). The engine data itself lives in {@link GameState}; this class
- * only adds what the LibGDX screen needs and never reaches back into the live
- * {@link Game}.
+ * The desktop's view of the game: the state of the engine, the moves the seat
+ * to move may choose from, the text of the log and the status line.
  *
- * <p>LibGDX scene2d is not thread-safe: widgets must only be mutated from the render
- * thread. The engine runs on a dedicated background thread and fires events from
- * there, so we capture the {@link GameState} on the engine thread (where the model is
- * consistent) and hand the copy to the render thread via {@code Gdx.app.postRunnable}.</p>
+ * <p>The state of the engine is already immutable, so the snapshot only adds
+ * what the screen needs. It is captured on the engine thread, where the state
+ * is consistent, and painted on the render thread.</p>
  *
- * <p>The human seat (finding D2) is supplied by the composition root
+ * <p>The seat the person plays is supplied by the composition root
  * ({@link DesktopLauncher}) rather than assumed here, so the view stays free of
- * the "SPADES is the human" convention.</p>
+ * the "SPADES is the person" convention.</p>
  */
-record GameSnapshot(GameState state, Card.Suit humanSeat, String status, List<String> logLines) {
+record GameSnapshot(
+        State state,
+        Card.Suit humanSeat,
+        List<Move> legalMoves,
+        String status,
+        List<String> logLines) {
 
     GameSnapshot {
-        java.util.Objects.requireNonNull(humanSeat, "humanSeat");
+        legalMoves = List.copyOf(legalMoves);
+        logLines = List.copyOf(logLines);
     }
 
-    /** Where an opponent sits relative to the human (bottom). */
-    enum Seat {
+    /** The snapshot of a state, with the legal moves the engine gives for it. */
+    static GameSnapshot of(State state, Card.Suit humanSeat, List<String> logLines) {
+        return new GameSnapshot(state, humanSeat, Game.legalMoves(state),
+                status(state, humanSeat), logLines);
+    }
+
+    /** Where an opponent sits relative to the person (bottom). */
+    enum SeatPosition {
         LEFT, TOP, RIGHT
     }
 
     /** One opponent's summary for the side panels. */
-    record OpponentView(Seat seat, Card.Suit trump, int cardCount) {}
+    record OpponentView(SeatPosition position, Card.Suit trump, int cardCount) {}
 
-    /**
-     * Capture a consistent snapshot of {@code game} on the calling (engine) thread.
-     *
-     * @param humanSeat the seat the composition root wired to the human; the view
-     *                  uses it to tell the human's hand and seat from the opponents'
-     */
-    static GameSnapshot capture(Game game, Card.Suit humanSeat, List<String> log) {
-        String status = "Trump: " + game.getTrump() + "   Players left: " + countGamers(game);
-        return new GameSnapshot(GameState.of(game), humanSeat, status, new ArrayList<>(log));
+    /** The cards in the pot, in the order they were played. */
+    List<Card> pot() {
+        return state.pot();
     }
 
-    // --- Accessors used by GameScreen (delegating to the immutable GameState) ---
-
-    java.util.Map<Card.Suit, List<Card>> scoreboard() { return state.scoreboard(); }
-
-    List<Card> pot() { return state.pot(); }
+    /** The hand of the seat the person plays. */
+    List<Card> humanHand() {
+        for (Seat seat : state.seats()) {
+            if (seat.trump() == humanSeat) {
+                return seat.hand();
+            }
+        }
+        return List.of();
+    }
 
     /**
-     * Opponents (every gamer except the human seat), in turn order. They are
-     * placed LEFT, TOP, RIGHT in that order — matching the clockwise seating
-     * around the human at the bottom.
+     * The opponents (every seat but the person's) in the seating order. They
+     * are placed LEFT, TOP and RIGHT in that order, around the person at the
+     * bottom.
      */
     List<OpponentView> opponents() {
-        Seat[] seats = {Seat.LEFT, Seat.TOP, Seat.RIGHT};
-        List<OpponentView> result = new ArrayList<>();
+        SeatPosition[] positions = {SeatPosition.LEFT, SeatPosition.TOP, SeatPosition.RIGHT};
+        List<OpponentView> views = new ArrayList<>();
         int i = 0;
-        for (GameState.PlayerState p : state.players()) {
-            if (p.gamer() && p.trump() != humanSeat) {
-                result.add(new OpponentView(seats[i % seats.length], p.trump(), p.hand().size()));
+        for (Seat seat : state.seats()) {
+            if (seat.trump() != humanSeat && !seat.out()) {
+                views.add(new OpponentView(positions[i % positions.length], seat.trump(), seat.hand().size()));
                 i++;
             }
         }
-        return result;
+        return views;
     }
 
-    List<Card> humanHand() {
-        List<Card> humanHand = new ArrayList<>();
-        for (GameState.PlayerState p : state.players()) {
-            if (p.trump() == humanSeat && p.gamer()) {
-                humanHand.addAll(p.hand());
-                break;
+    /** The ladder of every seat, bottom-up. */
+    Map<Card.Suit, List<Card>> scoreboard() {
+        Map<Card.Suit, List<Card>> boards = new EnumMap<>(Card.Suit.class);
+        for (Seat seat : state.seats()) {
+            boards.put(seat.trump(), seat.board());
+        }
+        return boards;
+    }
+
+    /** The cards of the hand that the seat to move may play. */
+    Set<Card> playableCards() {
+        Set<Card> cards = new LinkedHashSet<>();
+        for (Move move : legalMoves) {
+            if (move instanceof Move.Play play) {
+                cards.add(play.card());
             }
         }
-        return humanHand;
+        return cards;
     }
 
-    private static int countGamers(Game game) {
-        int n = 0;
-        for (Player p : game.getPlayers()) {
-            if (p.isGamer()) n++;
+    /** Whether the seat to move may take the pot. */
+    boolean takePotAvailable() {
+        for (Move move : legalMoves) {
+            if (move instanceof Move.TakePot) {
+                return true;
+            }
         }
-        return n;
+        return false;
+    }
+
+    private static String status(State state, Card.Suit humanSeat) {
+        int left = 0;
+        for (Seat seat : state.seats()) {
+            if (!seat.out()) {
+                left++;
+            }
+        }
+        return "Trump: " + state.dealer().trump() + "   Players left: " + left;
     }
 }

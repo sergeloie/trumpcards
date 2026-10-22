@@ -1,81 +1,103 @@
 package ru.anseranser.desktop;
 
-import ru.anseranser.input.InputProvider;
-import ru.anseranser.model.Card;
-import ru.anseranser.model.Player;
+import ru.anseranser.engine.Card;
+import ru.anseranser.engine.Move;
+import ru.anseranser.engine.State;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 /**
- * LibGDX click-driven {@link InputProvider}.
+ * The click of the person at the mouse, resolved to the index of a legal move.
  *
- * <p>The engine calls {@link #chooseLeadCard} / {@link #chooseDefense} from the
- * game-loop thread and blocks until the human clicks a card in the UI. The
- * {@link GameScreen} forwards card clicks to {@link #onCardClicked}, which
- * resolves the pending choice — but only if the clicked card is currently a
- * valid choice (otherwise the click is ignored).</p>
+ * <p>The engine thread asks for a move and blocks until the person clicks a
+ * card of the hand, or the button that takes the pot. The click arrives on the
+ * render thread; the index it resolves to is the one the engine wants, and a
+ * click on a card that is not legal is ignored.</p>
  *
- * <p>Because the engine blocks inside {@code chooseLeadCard}/{@code chooseDefense},
- * the game loop must run on a thread separate from the LibGDX render thread
- * (which is the one dispatching the clicks). See {@link DesktopLauncher}.</p>
+ * <p>Because the engine blocks inside {@link #choose}, the game loop must run
+ * on a thread separate from the LibGDX render thread, which is the one
+ * dispatching the clicks. See {@link DesktopLauncher}.</p>
  */
-public final class DesktopInputProvider implements InputProvider {
+final class DesktopInputProvider implements MoveChooser {
 
-    private volatile CompletableFuture<Card> pending;
-    private volatile List<Card> validChoices = List.of();
-    // Invoked (on the game-loop thread) whenever the set of valid choices
-    // changes, so the UI can repaint and highlight the playable cards. The engine
-    // emits no "your turn" event, so without this hook the human never sees the
-    // green highlight on their turn.
+    private volatile CompletableFuture<Integer> pending;
+    private volatile List<Move> legalMoves = List.of();
     private volatile Runnable repaintHook = () -> {};
 
-    /** Register a callback the provider invokes when valid choices become known. */
-    public void setRepaintHook(Runnable hook) {
+    /**
+     * Register the callback the provider invokes when the legal moves become
+     * known, so that the screen can mark the cards that may be played.
+     */
+    void setRepaintHook(Runnable hook) {
         this.repaintHook = (hook != null) ? hook : () -> {};
     }
 
     @Override
-    public Card chooseLeadCard(Player player, List<Card> hand) {
-        return await(hand);
-    }
-
-    @Override
-    public Card chooseDefense(Player player, Card attacking, List<Card> validDefenses) {
-        return await(validDefenses);
-    }
-
-    private Card await(List<Card> choices) {
-        validChoices = List.copyOf(choices);
-        // The engine emits no "your turn" event, so repaint now so the UI can
-        // highlight the playable cards before we block on the human's click.
+    public int choose(State state, List<Move> moves) {
+        CompletableFuture<Integer> choice = new CompletableFuture<>();
+        pending = choice;
+        legalMoves = List.copyOf(moves);
         repaintHook.run();
-        CompletableFuture<Card> f = new CompletableFuture<>();
-        pending = f;
         try {
-            return f.get();
+            return choice.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while awaiting card choice", e);
+            throw new RuntimeException("Interrupted while awaiting the player's choice", e);
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } finally {
             pending = null;
-            validChoices = List.of();
+            legalMoves = List.of();
         }
     }
 
-    /** Called by the UI when a card widget is clicked. Resolves the pending choice if valid. */
-    public void onCardClicked(Card card) {
-        CompletableFuture<Card> f = pending;
-        if (f != null && validChoices.contains(card)) {
-            f.complete(card);
+    /** The click on a card: the index of the move that plays it. */
+    void onCardClicked(Card card) {
+        int index = indexOfCard(legalMoves, card);
+        if (index >= 0) {
+            complete(index);
         }
     }
 
-    /** Currently acceptable cards (for highlighting in the view). Empty when not awaiting. */
-    public List<Card> validChoices() {
-        return validChoices;
+    /** The click on the button that takes the pot. */
+    void onTakePotClicked() {
+        int index = indexOfTakePot(legalMoves);
+        if (index >= 0) {
+            complete(index);
+        }
+    }
+
+    /** The legal moves of the pending choice. Empty when no choice is pending. */
+    List<Move> legalMoves() {
+        return legalMoves;
+    }
+
+    private void complete(int index) {
+        CompletableFuture<Integer> choice = pending;
+        if (choice != null) {
+            choice.complete(index);
+        }
+    }
+
+    /** The index of the move that plays the card, or -1 when it is not legal. */
+    static int indexOfCard(List<Move> moves, Card card) {
+        for (int i = 0; i < moves.size(); i++) {
+            if (moves.get(i) instanceof Move.Play play && play.card().equals(card)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** The index of the move that takes the pot, or -1 when it is not legal. */
+    static int indexOfTakePot(List<Move> moves) {
+        for (int i = 0; i < moves.size(); i++) {
+            if (moves.get(i) instanceof Move.TakePot) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

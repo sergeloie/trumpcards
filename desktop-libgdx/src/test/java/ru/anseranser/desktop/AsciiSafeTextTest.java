@@ -1,7 +1,7 @@
 package ru.anseranser.desktop;
 
 import org.junit.jupiter.api.Test;
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

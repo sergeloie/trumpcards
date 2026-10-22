@@ -1,14 +1,19 @@
 package ru.anseranser.desktop;
 
-import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.ui.VerticalGroup;
-import ru.anseranser.model.Card;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import ru.anseranser.engine.Card;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Renders the game state with a fixed 1920x1080 table layout:
@@ -32,16 +37,24 @@ import java.util.List;
  *
  * <p>The screen is stateless w.r.t. the engine: {@link #render(GameSnapshot)}
  * rebuilds the widgets from an immutable {@link GameSnapshot} (captured on the
- * engine thread) every time an event fires. All widget mutation happens on the
- * LibGDX render thread.</p>
+ * engine thread) every time a transition is rendered. All widget mutation
+ * happens on the LibGDX render thread.</p>
+ *
+ * <p>The cards of the hand that the engine lists as legal are marked green, so
+ * the person sees what may be played. The button that takes the pot is enabled
+ * when taking the pot is one of the legal moves.</p>
  */
 final class GameScreen extends Table {
+
+    /** The number of lines of the log the screen shows. */
+    private static final int LOG_LINES = 8;
 
     private final Skin skin;
     private final DesktopInputProvider input;
     private final CardAssets assets;
 
     private final Label statusLabel;
+    private final VerticalGroup logGroup;
     private final Table potTable;
     private final Table humanHandTable;
     private final VerticalGroup scoreboardGroup;
@@ -49,6 +62,7 @@ final class GameScreen extends Table {
     private final Table topOpponent;
     private final Table rightOpponent;
     private final Table humanPanel;
+    private final TextButton takePotButton;
 
     GameScreen(Skin skin, DesktopInputProvider input, CardAssets assets) {
         super(skin);
@@ -57,6 +71,7 @@ final class GameScreen extends Table {
         this.assets = assets;
 
         statusLabel = new Label("", skin);
+        logGroup = new VerticalGroup();
         potTable = new Table(skin);
         humanHandTable = new Table(skin);
         scoreboardGroup = new VerticalGroup();
@@ -64,6 +79,13 @@ final class GameScreen extends Table {
         topOpponent = new Table(skin);
         rightOpponent = new Table(skin);
         humanPanel = new Table(skin);
+        takePotButton = new TextButton("TAKE POT", skin);
+        takePotButton.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                input.onTakePotClicked();
+            }
+        });
 
         buildLayout();
     }
@@ -86,6 +108,8 @@ final class GameScreen extends Table {
         // Human hand (bottom)
         humanPanel.add(new Label("YOUR HAND", skin)).center().row();
         humanPanel.add(humanHandTable).expandX().center();
+        humanPanel.row();
+        humanPanel.add(takePotButton).center();
 
         // Row 1: scoreboard (left) | top opponent (center)
         add(scoreboardPanel).top().left();
@@ -101,8 +125,12 @@ final class GameScreen extends Table {
         add(humanPanel).bottom().expandX().center();
         add(new Table(skin)).right().row();
 
-        // Status line pinned to the very bottom-left
-        add(statusLabel).colspan(3).left().bottom();
+        // Log of the events (above the status line) and the status line, both
+        // pinned to the very bottom-left.
+        Table bottom = new Table(skin);
+        bottom.add(logGroup).left().row();
+        bottom.add(statusLabel).left();
+        add(bottom).colspan(3).left().bottom();
     }
 
     /**
@@ -111,13 +139,21 @@ final class GameScreen extends Table {
      */
     void render(GameSnapshot snap) {
         statusLabel.setText(snap.status());
+        takePotButton.setDisabled(!snap.takePotAvailable());
+
+        // Log of the events, oldest first.
+        logGroup.clear();
+        List<String> lines = snap.logLines();
+        for (String line : lines.subList(Math.max(0, lines.size() - LOG_LINES), lines.size())) {
+            logGroup.addActor(new Label(line, skin));
+        }
 
         // Scoreboard (top-left): most recent card on each suit's ladder.
         scoreboardGroup.clear();
-        snap.scoreboard().forEach((suit, stack) -> {
-            String label = stack.isEmpty()
+        snap.scoreboard().forEach((suit, board) -> {
+            String label = board.isEmpty()
                     ? "-"
-                    : CardCodes.of(stack.get(0));
+                    : CardCodes.of(board.get(board.size() - 1));
             scoreboardGroup.addActor(new Label(label, skin));
         });
 
@@ -127,15 +163,15 @@ final class GameScreen extends Table {
         topOpponent.clear();
         rightOpponent.clear();
         for (GameSnapshot.OpponentView o : snap.opponents()) {
-            Table panel = switch (o.seat()) {
+            Table panel = switch (o.position()) {
                 case LEFT -> leftOpponent;
                 case TOP -> topOpponent;
                 case RIGHT -> rightOpponent;
             };
             CardView back = CardView.back(o.trump(), assets);
-            if (o.seat() == GameSnapshot.Seat.LEFT) {
+            if (o.position() == GameSnapshot.SeatPosition.LEFT) {
                 back.setCardRotation(90f);
-            } else if (o.seat() == GameSnapshot.Seat.RIGHT) {
+            } else if (o.position() == GameSnapshot.SeatPosition.RIGHT) {
                 back.setCardRotation(-90f);
             }
             panel.add(back).pad(4f).row();
@@ -145,18 +181,18 @@ final class GameScreen extends Table {
 
         // Pot (center) — overlapping row so a large pot never overflows.
         potTable.clear();
-        addOverlappingRow(potTable, snap.pot(), false);
+        addOverlappingRow(potTable, snap.pot(), Set.of(), null);
 
         // Human hand (bottom) — a single horizontal row in Card.Suit declaration
         // order with cards sorted by rank inside each suit. Cards keep their true
         // size; when they would overflow the row width they overlap (stack)
-        // instead of shrinking.
+        // instead of shrinking. The cards the engine lists as legal are marked.
         humanHandTable.clear();
         List<Card> hand = snap.humanHand().stream()
                 .sorted(Comparator.comparingInt((Card c) -> c.suit().ordinal())
-                        .thenComparingInt(c -> c.rank().getValue()))
+                        .thenComparingInt(c -> c.rank().ordinal()))
                 .toList();
-        addOverlappingRow(humanHandTable, hand, false);
+        addOverlappingRow(humanHandTable, hand, snap.playableCards(), input::onCardClicked);
 
         // Human trump label under the hand.
         humanHandTable.row();
@@ -169,9 +205,11 @@ final class GameScreen extends Table {
      * each card at its true size (no scaling). When the natural width (all cards
      * side by side with a small gap) would exceed {@code maxWidth}, the cards are
      * overlapped left-to-right by reducing the gap to a negative offset so the row
-     * still fits. {@code rotate} rotates every card 90° (used for side seats).
+     * still fits. The cards of {@code playable} are marked; {@code onClick} is
+     * the handler of a click on a card, or null when the cards are not clickable.
      */
-    private void addOverlappingRow(Table row, List<Card> cards, boolean rotate) {
+    private void addOverlappingRow(Table row, List<Card> cards, Set<Card> playable,
+                                    Consumer<Card> onClick) {
         if (cards.isEmpty()) {
             row.add(CardView.empty(assets)).pad(2f);
             return;
@@ -182,12 +220,11 @@ final class GameScreen extends Table {
         float step = natural <= maxWidth
                 ? CardView.CARD_W + gap
                 : (maxWidth - CardView.CARD_W) / (cards.size() - 1);
+        List<CardView> views = new ArrayList<>();
         boolean first = true;
         for (Card c : cards) {
-            CardView view = CardView.face(c, assets, card -> input.onCardClicked(card));
-            if (rotate) {
-                view.setCardRotation(90f);
-            }
+            CardView view = CardView.face(c, assets, onClick == null ? null : onClick::accept);
+            views.add(view);
             if (first) {
                 row.add(view).pad(2f);
                 first = false;
@@ -196,5 +233,6 @@ final class GameScreen extends Table {
                 row.add(view).pad(2f).padLeft(step - CardView.CARD_W - 4f);
             }
         }
+        CardView.markLegal(views, playable);
     }
 }

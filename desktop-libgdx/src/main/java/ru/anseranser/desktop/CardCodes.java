@@ -1,6 +1,6 @@
 package ru.anseranser.desktop;
 
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
 
 /**
  * The names of the cards the desktop shows: the letter of the rank and the

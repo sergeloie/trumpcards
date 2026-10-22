@@ -4,7 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
-import ru.anseranser.model.Card;
+import ru.anseranser.engine.Card;
 
 import java.util.EnumMap;
 import java.util.Map;

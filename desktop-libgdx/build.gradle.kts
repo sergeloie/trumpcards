@@ -3,11 +3,13 @@ plugins {
 }
 
 // LibGDX desktop (Windows / Linux / macOS) backend.
-// Depends only on the :core engine; rendering + input live here.
+// Depends on the :engine rules and on the :bots policies; rendering + input
+// live here.
 val gdxVersion = "1.14.2"
 
 dependencies {
-    implementation(project(":core"))
+    implementation(project(":engine"))
+    implementation(project(":bots"))
 
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion")

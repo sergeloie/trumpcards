@@ -7,22 +7,22 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 
-import ru.anseranser.model.DeckSize;
+import ru.anseranser.engine.RankSet;
 
 import java.util.function.Consumer;
 
 /**
- * Pre-game menu shown by the desktop launcher. It lets the player pick the deck
- * size (36 or 52 cards) before the engine starts. On selection it invokes the
- * supplied callback with the chosen {@link DeckSize}; the launcher then builds
- * the {@code Game} and starts the engine thread.
+ * Pre-game menu shown by the desktop launcher. It lets the player pick the rank
+ * set (36 or 52 cards) before the engine starts. On selection it invokes the
+ * supplied callback with the chosen {@link RankSet}; the launcher then builds
+ * the setup and starts the engine thread.
  *
  * <p>This is a launch-time UI concern (not an in-game decision), so it lives in
- * the desktop presentation layer rather than the {@code InputProvider} seam.</p>
+ * the desktop presentation layer rather than in the {@link MoveChooser} seam.</p>
  */
 final class StartMenu extends Table {
 
-    StartMenu(Skin skin, Consumer<DeckSize> onChoose) {
+    StartMenu(Skin skin, Consumer<RankSet> onChoose) {
         super(skin);
         setFillParent(true);
         pad(16f);
@@ -37,7 +37,7 @@ final class StartMenu extends Table {
         thirtySix.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                onChoose.accept(DeckSize.THIRTY_SIX);
+                onChoose.accept(RankSet.SIX_TO_ACE);
             }
         });
 
@@ -45,7 +45,7 @@ final class StartMenu extends Table {
         fiftyTwo.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                onChoose.accept(DeckSize.FIFTY_TWO);
+                onChoose.accept(RankSet.TWO_TO_ACE);
             }
         });
 
