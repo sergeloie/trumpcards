@@ -5,10 +5,9 @@ with a strictly one-way dependency graph. The modules are layers and tools aroun
 domain, not separate contexts — so this document is the architectural index: what lives
 where, what depends on what, and where you enter the system.
 
-> This describes the target shape. The migration is under way: the rules currently
-> live in the old `core` module, and the new engine is being built in an `engine`
-> module beside it. See [plan.md](./docs/plan.md) for the steps and the gate that
-> keeps the two implementations honest.
+> This describes the shape the repository has now. The migration is done: the rules
+> live in the `core` module and there is one engine. See [plan.md](./docs/plan.md) for
+> the steps that got there and the gates that kept them honest.
 
 
 ## The rule

@@ -59,7 +59,8 @@ _Avoid_: Pile, hand of cards, combination
 
 **Round**:
 One pass through dealing, obligatory exchange and play, ending when a single seat still
-holds cards. The loser of the round pushes their lowest trump onto their board.
+holds cards. The loser of the round pushes the trump of the rank their board requires
+next onto their board, or their lowest trump when that card is not among their cards.
 _Avoid_: Hand (of cards), deal
 
 **Obligatory exchange**:
@@ -155,9 +156,10 @@ The setup produces the first state and reports what happened — the deal and th
 From then on the game is a loop. The seat whose turn it is has a list of legal moves;
 something outside the rules picks one; applying it produces the next state and reports
 what happened. A seat that empties its hand leaves the round. When only one seat still
-holds cards, that seat loses the round: its lowest trump goes onto its board, the rest of
-its cards and the pot return to the deck, and a new round is dealt. When only one seat is
-left in the game, the game is over.
+holds cards, that seat loses the round: the trump of the rank its board requires next
+goes onto its board — or its lowest trump, when that card is not among its cards — the
+rest of its cards and the pot return to the deck, and a new round is dealt. When only
+one seat is left in the game, the game is over.
 
 A policy never sees the state directly. It sees an observation, it produces a choice
 among the legal moves, and the rules do the rest.

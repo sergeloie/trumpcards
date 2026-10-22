@@ -152,7 +152,7 @@ Javadoc `MAX_ROUND_MOVES` утверждал: «e.g. seed 0 loops 2M+ moves». �
 
 ### 4.4. Расхождение формальной модели и реализации по RNG — **ИСПРАВЛЕНО**
 
-`docs/game_state_machine.yaml` описывал LCG («Linear Congruential Generator»),
+`docs/archive/game_state_machine.yaml` описывал LCG («Linear Congruential Generator»),
 тогда как реализация использует `SplitMix64`. На детерминизм не влияет (оба
 детерминированы), но модель вводила в заблуждение.
 **Фикс:** RNG-блок YAML переписан под `SplitMix64` (алгоритм `nextBits` +

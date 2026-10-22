@@ -1,12 +1,12 @@
 @echo off
 setlocal
 
-set PROJECT_DIR=C:\DevProjects\trumpcards
+rem The script works in any checkout: %~dp0 is the directory the script is in.
+cd /d "%~dp0"
 
 echo ===============================
 echo  Rebuild project...
 echo ===============================
-cd /d "%PROJECT_DIR%"
 call gradlew.bat :desktop-libgdx:installDist
 
 if errorlevel 1 (
@@ -20,6 +20,6 @@ echo.
 echo ===============================
 echo  Launching app...
 echo ===============================
-call "%PROJECT_DIR%\desktop-libgdx\build\install\desktop-libgdx\bin\desktop-libgdx.bat"
+call "%~dp0desktop-libgdx\build\install\desktop-libgdx\bin\desktop-libgdx.bat"
 
 endlocal

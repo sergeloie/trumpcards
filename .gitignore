@@ -28,6 +28,9 @@ replay_pid*
 build/
 !gradle/wrapper/gradle-wrapper.jar
 
+# The per-machine configuration: the Android SDK path of the machine that builds
+/local.properties
+
 # IDE
 .idea/
 *.iml

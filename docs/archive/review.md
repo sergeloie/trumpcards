@@ -125,7 +125,7 @@
 ### C3 — `endRound()` выбирает карту на табло не по `nextRequiredRank`, а по минимуму в банке+руке
 
 - **Где:** `core/model/Game.java` → `endRound(Player loser)`.
-- **Суть:** по `rules.md` §6 и `docs/game_state_machine.yaml` (`ROUND_END`) карта, уходящая на табло
+- **Суть:** по `rules.md` §6 и `docs/archive/game_state_machine.yaml` (`ROUND_END`) карта, уходящая на табло
   проигравшего, — это «следующая по старшинству для его табло», т.е. результат
   `Scoreboard.nextRequiredRank(trump)`. Код же берёт **минимальный по достоинству козырь** из
   `pile` (рука проигравшего + банк). Обычно эти величины совпадают (все младшие козыри уже на
@@ -204,7 +204,7 @@
   пакетно-приватный `RoundResolver`) и I4c ✅ (вариант A: `GameDriver` ходит в состояние
   `Game` через именованные пакетно-приватные аксессоры, а не через поля; публичный тип
   `Game.GameDriver` сохранён). Вариант B (top-level `GameDriver`) — только по согласованию.
-  План — `docs/refactoring-plan.md`.
+  План — `docs/archive/refactoring-plan.md`.
 
 ### I5 — `ownerBySuit`/`snapshotHands` на `java.util.HashMap` (аудит недетерминизма)
 
@@ -213,7 +213,7 @@
   внешний цикл идёт по `players` (`TurnOrder` = список, стабилен), а `ownerBySuit` используется
   только через `get(suit)`; порядок `HashMap` на результат не влияет. `snapshotHands` кладёт данные
   в map, которая идёт только в событие для рендера. **Вердикт: детерминизм не нарушен**, но
-  `EnumMap` был бы однозначнее и дешевле. Финальное подтверждение — в `docs/determinism-audit.md`
+  `EnumMap` был бы однозначнее и дешевле. Финальное подтверждение — в `docs/archive/determinism-audit.md`
   (Задание 3).
 - **Категория:** аудит недетерминизма / читаемость.
 - **Серьёзность:** **Важно.**
@@ -290,18 +290,18 @@
 - **Статус:** ✅ desktop — слот решает один раз `DesktopLauncher.HUMAN_SEAT` и прокидывается
   через `DesktopGameListener` в `GameSnapshot.humanSeat()`; в рендер-слое `SPADES` больше нет.
   ✅ android — `GameEngineBridge.HUMAN_SEAT` → доменный `GameState.humanSeat` → `GameOverScreen`.
-  См. `docs/refactoring-plan.md`, Шаг 5.
+  См. `docs/archive/refactoring-plan.md`, Шаг 5.
 
 ### D3 — Порядок потребления RNG как часть контракта детерминизма не задокументирован
 
 - **Где:** `Game.chooseFirstDealer()` (`rng.nextInt`), `Game.shuffleAndDeal`, `Dealer.shuffle`.
 - **Суть:** итог зависит от **порядка** вызовов RNG (выбор дилера → шаффл). Любая вставка лишнего
-  `nextInt` изменит все игры по сиду. Полезно зафиксировать в `docs/determinism-audit.md`.
+  `nextInt` изменит все игры по сиду. Полезно зафиксировать в `docs/archive/determinism-audit.md`.
 - **Категория:** документация/скрытая связность.
 - **Серьёзность:** **Желательно.**
 - **Оценка:** S.
 - **Статус:** ✅ исправлено — порядок потребления RNG зафиксирован в
-  `docs/determinism-audit.md` §3 (один `nextInt` на выбор дилера, затем `size-1` вызовов
+  `docs/archive/determinism-audit.md` §3 (один `nextInt` на выбор дилера, затем `size-1` вызовов
   в `Dealer.shuffle`; `deal` RNG не использует).
 
 ### D4 — `SplitMix64()` по умолчанию сеется `System.nanoTime()`
@@ -313,7 +313,7 @@
 - **Категория:** аудит недетерминизма.
 - **Серьёзность:** **Желательно.**
 - **Оценка:** S.
-- **Статус:** ✅ исправлено — зафиксировано в `docs/determinism-audit.md` §3.1
+- **Статус:** ✅ исправлено — зафиксировано в `docs/archive/determinism-audit.md` §3.1
   (дефолтное зерно из `System.nanoTime()` + контракт: детерминизм только при явной инъекции
   `Rng`; в тестах — `FixedRng`/`ScriptedCardDealer`).
 
@@ -386,7 +386,7 @@
 |---|---|---|---|
 | 14 | **D1** — битые javadoc-ссылки | ✅ приведены к `playGame(Rng)` | S |
 | 15 | **D2** — хардкод `SPADES` в desktop | ✅ desktop (composition root → snapshot) и android (`GameEngineBridge` → `GameState.humanSeat`) | S |
-| 16 | **D3** — порядок RNG не задокументирован | ✅ зафиксирован в `docs/determinism-audit.md` §3 | S |
+| 16 | **D3** — порядок RNG не задокументирован | ✅ зафиксирован в `docs/archive/determinism-audit.md` §3 | S |
 | 17 | **D4** — `SplitMix64()` на `nanoTime` | ✅ зафиксирован в аудите §3.1 (единственный платформенный источник) | S |
 
 ---
@@ -401,7 +401,7 @@
 - R7-контракт потокобезопасности задокументирован и не нарушен в UI-портах.
 - `TurnOrder` — детерминированный обход вместо прежнего `ThreadLocalRandom`-anchor.
 - `DeckSize` — единый источник рангов/базового ранга для 36 и 52 карт.
-- `docs/game_state_machine.yaml` как формальная модель — соответствует коду (включая детерминированный тай-брейк §8).
+- `docs/archive/game_state_machine.yaml` как формальная модель — соответствует коду (включая детерминированный тай-брейк §8).
 
 ---
 
@@ -410,6 +410,6 @@
 Игровая логика изолирована в `core`; UI-порты правил не дублируют; контракт R7 не нарушен.
 Изначальные риски — **дублирование правила хода (C1/I9)**, **повреждённый участок `Game.java` (C2)**,
 **неявное допущение в `endRound()` (C3)** и **живая колода `Dealer.deck()` (C4)** — закрыты.
-Бэклог из §5 лёг в основу `docs/refactoring-plan.md` (Задание 4); Шаги 1–5 плана выполнены
+Бэклог из §5 лёг в основу `docs/archive/refactoring-plan.md` (Задание 4); Шаги 1–5 плана выполнены
 (C1/C2/C3/C4/I1–I9/D1/D3/D4). Расхождений с `rules.md` больше нет: §8 уточнён
 (детерминированный тай-брейк вместо случайного), поведение кода не менялось.

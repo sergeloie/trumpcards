@@ -104,7 +104,7 @@ class GameStartTest {
     }
 
     @Test
-    void theDealOfFourPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
+    void theFourPlayerDealForSeedFortyTwoIsFixed() {
         State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, FOUR_SUITS, 42L)).state();
 
         assertEquals(List.of(
@@ -126,7 +126,7 @@ class GameStartTest {
     }
 
     @Test
-    void theDealOfTwoPlayersIsTheOneTheOldEngineDealsForTheSameSeed() {
+    void theTwoPlayerDealForSeedFortyTwoIsFixed() {
         State state = Dealing.deal(new Setup(RankSet.SIX_TO_ACE, TWO_SUITS, 42L)).state();
 
         assertEquals(SPADES, state.dealer().trump());
