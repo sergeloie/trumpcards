@@ -10,27 +10,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.anseranser.model.Card
+import ru.anseranser.engine.Card
+import ru.anseranser.trumpcards.R
 
 @Composable
 fun PotArea(
     pot: List<Card>,
     modifier: Modifier = Modifier,
 ) {
-    val cards = pot.filterNotNull()
-    if (cards.isEmpty()) return
+    if (pot.isEmpty()) return
 
-    val visible = if (cards.size > 5) cards.takeLast(5) else cards
+    val visible = if (pot.size > 5) pot.takeLast(5) else pot
 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "${cards.size} карт",
+            text = pluralStringResource(R.plurals.pot_cards, pot.size, pot.size),
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,

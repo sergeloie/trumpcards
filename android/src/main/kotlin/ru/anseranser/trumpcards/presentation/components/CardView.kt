@@ -16,11 +16,15 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import ru.anseranser.model.Card
+import ru.anseranser.engine.Card
+import ru.anseranser.trumpcards.R
 import ru.anseranser.trumpcards.util.CardImageMapper
+import ru.anseranser.trumpcards.util.cardSuitNameRes
+import ru.anseranser.trumpcards.util.rankNameRes
 
 @Composable
 fun CardView(
@@ -35,6 +39,11 @@ fun CardView(
             .data("file:///android_asset/$assetPath")
             .crossfade(true)
             .build(),
+    )
+    val description = stringResource(
+        R.string.card_description,
+        stringResource(rankNameRes(card.rank())),
+        stringResource(cardSuitNameRes(card.suit())),
     )
 
     Box(
@@ -60,7 +69,7 @@ fun CardView(
     ) {
         Image(
             painter = painter,
-            contentDescription = "${card.rank()} of ${card.suit()}",
+            contentDescription = description,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(2.dp),

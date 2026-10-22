@@ -8,28 +8,32 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import ru.anseranser.model.DeckSize
+import ru.anseranser.engine.RankSet
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/**
+ * What the app remembers between the games: the rank set the person picked
+ * last, which is offered to them again.
+ */
 class SettingsDataStore(private val context: Context) {
 
-    val defaultDeckSize: Flow<DeckSize> = context.dataStore.data
+    val rankSet: Flow<RankSet> = context.dataStore.data
         .map { prefs ->
             try {
-                DeckSize.valueOf(prefs[DECK_SIZE_KEY] ?: DeckSize.THIRTY_SIX.name)
-            } catch (_: Exception) {
-                DeckSize.THIRTY_SIX
+                RankSet.valueOf(prefs[RANK_SET_KEY] ?: RankSet.SIX_TO_ACE.name)
+            } catch (_: IllegalArgumentException) {
+                RankSet.SIX_TO_ACE
             }
         }
 
-    suspend fun setDeckSize(size: DeckSize) {
+    suspend fun setRankSet(rankSet: RankSet) {
         context.dataStore.edit { prefs ->
-            prefs[DECK_SIZE_KEY] = size.name
+            prefs[RANK_SET_KEY] = rankSet.name
         }
     }
 
     companion object {
-        private val DECK_SIZE_KEY = stringPreferencesKey("deck_size")
+        private val RANK_SET_KEY = stringPreferencesKey("rank_set")
     }
 }

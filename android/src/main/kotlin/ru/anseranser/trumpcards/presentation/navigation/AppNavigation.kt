@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import ru.anseranser.engine.RankSet
 import ru.anseranser.trumpcards.domain.GameIntent
 import ru.anseranser.trumpcards.domain.GameState
 import ru.anseranser.trumpcards.presentation.screens.game.GameScreen
@@ -14,13 +15,15 @@ import ru.anseranser.trumpcards.presentation.screens.start.StartScreen
 fun AppNavigation(
     navController: NavHostController,
     state: GameState,
+    rankSet: RankSet,
     onIntent: (GameIntent) -> Unit,
 ) {
     NavHost(navController = navController, startDestination = "start") {
         composable("start") {
             StartScreen(
-                onStartGame = { deckSize ->
-                    onIntent(GameIntent.StartGame(deckSize))
+                rememberedRankSet = rankSet,
+                onStartGame = { chosen ->
+                    onIntent(GameIntent.StartGame(chosen))
                     navController.navigate("game")
                 },
             )

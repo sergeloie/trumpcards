@@ -1,4 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Trump Cards</string>
+
+    <string name="choose_deck">Выберите колоду</string>
+
+    <plurals name="deck_cards">
+        <item quantity="one">%1$d карта</item>
+        <item quantity="few">%1$d карты</item>
+        <item quantity="many">%1$d карт</item>
+        <item quantity="other">%1$d карт</item>
+    </plurals>
+
+    <plurals name="pot_cards">
+        <item quantity="one">%1$d карта</item>
+        <item quantity="few">%1$d карты</item>
+        <item quantity="many">%1$d карт</item>
+        <item quantity="other">%1$d карт</item>
+    </plurals>
+
+    <string name="take_pot">Взять взнос</string>
+    <string name="eliminated">ВЫБИТ</string>
+    <string name="card_back">Рубашка карты</string>
+    <string name="card_description">%1$s %2$s</string>
+
+    <string name="game_over">Игра окончена</string>
+    <string name="you_win">Вы победили!</string>
+    <string name="winner_is">%1$s победили!</string>
+    <string name="play_again">Играть снова</string>
+    <string name="main_menu">Главное меню</string>
+
+    <string name="suit_spades">Пики</string>
+    <string name="suit_clubs">Трефы</string>
+    <string name="suit_diamonds">Бубны</string>
+    <string name="suit_hearts">Черви</string>
+
+    <string name="card_suit_spades">Пик</string>
+    <string name="card_suit_clubs">Треф</string>
+    <string name="card_suit_diamonds">Бубн</string>
+    <string name="card_suit_hearts">Черв</string>
+
+    <string name="rank_two">Двойка</string>
+    <string name="rank_three">Тройка</string>
+    <string name="rank_four">Четвёрка</string>
+    <string name="rank_five">Пятёрка</string>
+    <string name="rank_six">Шестёрка</string>
+    <string name="rank_seven">Семёрка</string>
+    <string name="rank_eight">Восьмёрка</string>
+    <string name="rank_nine">Девятка</string>
+    <string name="rank_ten">Десятка</string>
+    <string name="rank_jack">Валет</string>
+    <string name="rank_queen">Дама</string>
+    <string name="rank_king">Король</string>
+    <string name="rank_ace">Туз</string>
 </resources>

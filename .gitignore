@@ -48,5 +48,6 @@ frontend/dist/
 
 # Ignore Gradle build output directory
 build
-assets/
+# The local asset catalogue of the machine, not the assets of the app
+/assets/
 /.mimocode/

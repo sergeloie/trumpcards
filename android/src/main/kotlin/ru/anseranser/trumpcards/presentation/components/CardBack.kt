@@ -17,12 +17,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+import ru.anseranser.trumpcards.R
 import ru.anseranser.trumpcards.util.CardImageMapper
 
 @Composable
@@ -46,7 +48,7 @@ fun CardBack(
     ) {
         Image(
             painter = painter,
-            contentDescription = "Card back",
+            contentDescription = stringResource(R.string.card_back),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(4.dp),

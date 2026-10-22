@@ -1,23 +1,19 @@
 package ru.anseranser.trumpcards.domain
 
-import ru.anseranser.model.Card
-import ru.anseranser.model.DeckSize
+import ru.anseranser.engine.Card
+import ru.anseranser.engine.RankSet
 
 data class GameState(
     val phase: GamePhase = GamePhase.MENU,
-    val deckSize: DeckSize? = null,
+    val rankSet: RankSet? = null,
     val trump: Card.Suit? = null,
     val scoreboard: Map<Card.Suit, List<Card>> = emptyMap(),
     val pot: List<Card> = emptyList(),
     val humanHand: List<Card> = emptyList(),
     val opponents: List<OpponentState> = emptyList(),
-    val isWaitingForInput: Boolean = false,
-    val inputRequest: InputRequestInfo? = null,
+    val choice: PlayerChoice? = null,
     val winner: Card.Suit? = null,
-    /** The seat the human plays, as decided by the composition root (finding D2). */
     val humanSeat: Card.Suit? = null,
-    val statusMessage: String = "",
-    val lastEvent: GameEventSnapshot? = null,
 )
 
 enum class GamePhase { MENU, PLAYING, GAME_OVER }
@@ -28,14 +24,11 @@ data class OpponentState(
     val isEliminated: Boolean = false,
 )
 
-data class InputRequestInfo(
-    val kind: InputRequestKind,
-    val validCards: List<Card>,
-)
-
-enum class InputRequestKind { LEAD, DEFEND }
-
-data class GameEventSnapshot(
-    val type: String,
-    val message: String,
+/**
+ * The move the person at the table may choose from: the cards that may be
+ * played, and whether the pot may be taken.
+ */
+data class PlayerChoice(
+    val playableCards: List<Card>,
+    val canTakePot: Boolean,
 )

@@ -14,10 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.anseranser.model.Card
+import ru.anseranser.engine.Card
+import ru.anseranser.trumpcards.R
+import ru.anseranser.trumpcards.util.suitNameRes
 
 @Composable
 fun GameOverScreen(
@@ -35,7 +38,7 @@ fun GameOverScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Game Over",
+            text = stringResource(R.string.game_over),
             fontSize = 36.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -44,9 +47,13 @@ fun GameOverScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (winner != null) {
-            val winnerName = if (winner == humanSeat) "You WIN!" else "${suitName(winner)} wins!"
+            val winnerText = if (winner == humanSeat) {
+                stringResource(R.string.you_win)
+            } else {
+                stringResource(R.string.winner_is, stringResource(suitNameRes(winner)))
+            }
             Text(
-                text = winnerName,
+                text = winnerText,
                 fontSize = 24.sp,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -64,7 +71,7 @@ fun GameOverScreen(
             ),
         ) {
             Text(
-                text = "Play Again",
+                text = stringResource(R.string.play_again),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -82,17 +89,10 @@ fun GameOverScreen(
             ),
         ) {
             Text(
-                text = "Main Menu",
+                text = stringResource(R.string.main_menu),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
     }
-}
-
-private fun suitName(suit: Card.Suit): String = when (suit) {
-    Card.Suit.SPADES -> "Spades"
-    Card.Suit.CLUBS -> "Clubs"
-    Card.Suit.DIAMONDS -> "Diamonds"
-    Card.Suit.HEARTS -> "Hearts"
 }

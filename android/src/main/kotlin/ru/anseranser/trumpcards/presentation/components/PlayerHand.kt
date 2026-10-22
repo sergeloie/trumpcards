@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import ru.anseranser.model.Card
+import ru.anseranser.engine.Card
 
 @Composable
 fun PlayerHand(
@@ -32,9 +32,8 @@ fun PlayerHand(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             suits.forEach { suit ->
-                val suitCards = hand.filterNotNull()
-                    .filter { it.suit() == suit }
-                    .sortedBy { it.rank().value }
+                val suitCards = hand.filter { it.suit() == suit }
+                    .sortedBy { it.rank().ordinal }
 
                 if (suitCards.isNotEmpty()) {
                     val needsOverlap = (suitCards.size * 52).dp > maxWidth

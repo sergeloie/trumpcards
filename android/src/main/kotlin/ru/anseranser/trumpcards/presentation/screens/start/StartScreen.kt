@@ -1,6 +1,5 @@
 package ru.anseranser.trumpcards.presentation.screens.start
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,37 +15,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
-import ru.anseranser.model.DeckSize
+import ru.anseranser.engine.RankSet
+import ru.anseranser.trumpcards.R
+
+/** The seats at the table: one per suit in play. */
+private const val SEATS = 4
 
 @Composable
 fun StartScreen(
-    onStartGame: (DeckSize) -> Unit,
+    rememberedRankSet: RankSet,
+    onStartGame: (RankSet) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val bgPainter = rememberAsyncImagePainter(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data("file:///android_asset/load_screen.jpg")
-            .crossfade(true)
-            .build(),
-    )
-
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        Image(
-            painter = bgPainter,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -55,46 +43,55 @@ fun StartScreen(
             verticalArrangement = Arrangement.Bottom,
         ) {
             Text(
-                text = "Выберите колоду",
+                text = stringResource(R.string.choose_deck),
                 fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onBackground,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Button(
-                onClick = { onStartGame(DeckSize.THIRTY_SIX) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Text(
-                    text = "36 карт",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            DeckButton(
+                rankSet = RankSet.SIX_TO_ACE,
+                remembered = rememberedRankSet == RankSet.SIX_TO_ACE,
+                onClick = { onStartGame(RankSet.SIX_TO_ACE) },
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
-                onClick = { onStartGame(DeckSize.FIFTY_TWO) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                ),
-            ) {
-                Text(
-                    text = "52 карты",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            DeckButton(
+                rankSet = RankSet.TWO_TO_ACE,
+                remembered = rememberedRankSet == RankSet.TWO_TO_ACE,
+                onClick = { onStartGame(RankSet.TWO_TO_ACE) },
+            )
         }
+    }
+}
+
+@Composable
+private fun DeckButton(
+    rankSet: RankSet,
+    remembered: Boolean,
+    onClick: () -> Unit,
+) {
+    val cards = rankSet.cardCount(SEATS)
+    val label = pluralStringResource(R.plurals.deck_cards, cards, cards)
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (remembered) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.secondary
+            },
+        ),
+    ) {
+        Text(
+            text = if (remembered) "✓ $label" else label,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
